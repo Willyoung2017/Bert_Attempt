@@ -368,7 +368,12 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             segment_ids = []
             tag_tokens.append("[CLS]")
             if query_tags is not None:
-                tag_tokens.extend(query_tags[:len(query_tokens)])
+                for i in range(len(query_tokens)):
+                    if i >= len(query_tags):
+                        tag_tokens.append("O")
+                    else:
+                        tag_tokens.append(query_tags[i])
+
             tag_tokens.append("[SEP]")
             tokens.append("[CLS]")
             segment_ids.append(0)
@@ -388,7 +393,10 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
                 if context_tags is not None:
-                    tag_tokens.append(context_tags[split_token_index])
+                    if split_token_index >= len(context_tags):
+                        tag_tokens.append("O")
+                    else:
+                        tag_tokens.append(context_tags[split_token_index])
                 segment_ids.append(1)
             tag_tokens.append("[SEP]")
             tokens.append("[SEP]")

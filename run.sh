@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 export SQUAD_DIR=~/data/squad
-export OUTPUT_DIR=./bert_large
-export BERT_MODEL_DIR=./bert-base-uncased
-export SQUAD_TAG_DIR=!/data/squad/srl_tags
+export OUTPUT_DIR=./bert_base_srl
+export SQUAD_TAG_DIR=~/data/squad/srl_tags
 export PYTHONPATH=./
 source activate pytorch
-CUDA_VISIBLE_DEVICES=1,2,3,6 python examples/run_squad.py \
-  --bert_model bert-large-uncased \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python examples/run_squad.py \
+  --bert_model bert-base-uncased \
   --do_train \
   --do_predict \
   --train_file $SQUAD_DIR/train-v1.1.json \
