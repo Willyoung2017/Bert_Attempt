@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 export SQUAD_DIR=~/data/squad
 export OUTPUT_DIR=./bert_large
 export BERT_MODEL_DIR=./bert-base-uncased
@@ -20,7 +21,7 @@ CUDA_VISIBLE_DEVICES=1,2,3,6 python examples/run_squad.py \
   --optimize_on_cpu \
   --fp16 \
   --loss_scale 128 \
-  --train_context_tag_file $SQUAD_TAG_DIR/srl_squad_train
-  --train_question_tag_file $SQUAD_TAG_DIR/srl_squad_question_train
-  --predict_context_tag_file $SQUAD_TAG_DIR/srl_squad_dev
+  --train_context_tag_file $SQUAD_TAG_DIR/srl_squad_train \
+  --train_question_tag_file $SQUAD_TAG_DIR/srl_squad_question_train \
+  --predict_context_tag_file $SQUAD_TAG_DIR/srl_squad_dev \
   --predict_question_tag_file $SQUAD_TAG_DIR/srl_squad_question_dev
