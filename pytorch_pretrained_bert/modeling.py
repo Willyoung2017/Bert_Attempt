@@ -183,7 +183,7 @@ class BertEmbeddings(nn.Module):
         self.LayerNorm = BertLayerNorm(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, input_ids, input_tags=None, token_type_ids=None):
+    def forward(self, input_ids, token_type_ids=None, input_tags=None):
         seq_length = input_ids.size(1)
         position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
         position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
@@ -217,7 +217,7 @@ class BertEmbeddingsWithSRL(nn.Module):
         self.LayerNorm = BertLayerNorm(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, input_ids, input_tags, token_type_ids=None):
+    def forward(self, input_ids, token_type_ids=None, input_tags=None):
         seq_length = input_ids.size(1)
         position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
         position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
