@@ -24,9 +24,10 @@ import logging
 import json
 import math
 import os
+from os.path import expanduser, join
 import random
 from tqdm import tqdm, trange
-
+import pickle
 import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
@@ -51,13 +52,17 @@ class SquadExample(object):
                  doc_tokens,
                  orig_answer_text=None,
                  start_position=None,
-                 end_position=None):
+                 end_position=None,
+                 doc_tag=None,
+                 question_tag=None):
         self.qas_id = qas_id
         self.question_text = question_text
         self.doc_tokens = doc_tokens
         self.orig_answer_text = orig_answer_text
         self.start_position = start_position
         self.end_position = end_position
+        self.doc_tag=doc_tag
+        self.question_tag=question_tag
 
     def __str__(self):
         return self.__repr__()
@@ -89,7 +94,9 @@ class InputFeatures(object):
                  input_mask,
                  segment_ids,
                  start_position=None,
-                 end_position=None):
+                 end_position=None,
+                 input_tags=None,
+                 ):
         self.unique_id = unique_id
         self.example_index = example_index
         self.doc_span_index = doc_span_index
@@ -101,6 +108,128 @@ class InputFeatures(object):
         self.segment_ids = segment_ids
         self.start_position = start_position
         self.end_position = end_position
+        self.input_tags = input_tags
+
+
+def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file, is_training):
+    """Read a SQuAD json file into a list of SquadExample."""
+    with open(input_file, "r") as reader:
+        input_data = json.load(reader)["data"]
+
+    context_tag_data = list(open(context_tag_file, 'r'))
+    question_tag_data = list(open(question_tag_file, 'r'))
+
+    def is_whitespace(c):
+        if c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F:
+            return True
+        return False
+
+    examples = []
+    for entry_ix, entry in enumerate(input_data):
+        context_tag = json.loads(context_tag_data[entry_ix])
+        question_tag = json.loads(question_tag_data[entry_ix])
+
+        for para_ix, paragraph in enumerate(entry["paragraphs"]):
+            text_tag = []
+            context_tag_para = context_tag['paragraphs'][para_ix]
+            question_tag_para = question_tag['paragraphs'][para_ix]
+
+            for senix, sen in enumerate(context_tag_para['sentences']):
+                sen_srl = sen['srl']
+                cnt_sen_tag = 0
+                tag_ix = 0
+                sen_words = sen_srl['words']
+                sen_verbs = sen_srl['verbs']
+                if len(sen_verbs) == 0:
+                    sen_tag = ["O"] * len(sen_words)
+                else:
+                    for ix, verb_tag in enumerate(sen_verbs):
+                        cnt_tmp_tag = 0
+                        for tag in verb_tag['tags']:
+                            if tag != 'O':
+                                cnt_tmp_tag = cnt_tmp_tag + 1
+                        if cnt_tmp_tag > cnt_sen_tag:
+                            cnt_sen_tag = cnt_tmp_tag
+                            tag_ix = ix
+                    sen_tag = sen_verbs[tag_ix]['tags']
+                text_tag.extend(sen_tag)
+
+            paragraph_text = paragraph["context"]
+            doc_tokens = []
+            char_to_word_offset = []
+            prev_is_whitespace = True
+            for c in paragraph_text:
+                if is_whitespace(c):
+                    prev_is_whitespace = True
+                else:
+                    if prev_is_whitespace:
+                        doc_tokens.append(c)
+                    else:
+                        doc_tokens[-1] += c
+                    prev_is_whitespace = False
+                char_to_word_offset.append(len(doc_tokens) - 1)
+
+            for qa_ix, qa in enumerate(paragraph["qas"]):
+                question_tags = question_tag_para['qas'][qa_ix]
+                question_srl = question_tags['srl']
+                cnt_question_tag = 0
+                tag_ix = 0
+                question_words = question_srl['words']
+                question_verbs = question_srl['verbs']
+
+                if len(question_verbs) == 0:
+                    que_tag = ["O"] * len(question_words)
+                else:
+                    for ix, verb_tag in enumerate(question_verbs):
+                        cnt_tmp_tag = 0
+                        for tag in verb_tag['tags']:
+                            if tag != 'O':
+                                cnt_tmp_tag = cnt_tmp_tag + 1
+                        if cnt_tmp_tag > cnt_question_tag:
+                            cnt_question_tag = cnt_tmp_tag
+                            tag_ix = ix
+                    que_tag = question_verbs[tag_ix]['tags']
+
+                qas_id = qa["id"]
+                question_text = qa["question"]
+                start_position = None
+                end_position = None
+                orig_answer_text = None
+                if is_training:
+                    if len(qa["answers"]) != 1:
+                        raise ValueError(
+                            "For training, each question should have exactly 1 answer.")
+                    answer = qa["answers"][0]
+                    orig_answer_text = answer["text"]
+                    answer_offset = answer["answer_start"]
+                    answer_length = len(orig_answer_text)
+                    start_position = char_to_word_offset[answer_offset]
+                    end_position = char_to_word_offset[answer_offset + answer_length - 1]
+                    # Only add answers where the text can be exactly recovered from the
+                    # document. If this CAN'T happen it's likely due to weird Unicode
+                    # stuff so we will just skip the example.
+                    #
+                    # Note that this means for training mode, every example is NOT
+                    # guaranteed to be preserved.
+                    actual_text = " ".join(doc_tokens[start_position:(end_position + 1)])
+                    cleaned_answer_text = " ".join(
+                        whitespace_tokenize(orig_answer_text))
+                    if actual_text.find(cleaned_answer_text) == -1:
+                        logger.warning("Could not find answer: '%s' vs. '%s'",
+                                           actual_text, cleaned_answer_text)
+                        continue
+
+                example = SquadExample(
+                    qas_id=qas_id,
+                    question_text=question_text,
+                    doc_tokens=doc_tokens,
+                    orig_answer_text=orig_answer_text,
+                    start_position=start_position,
+                    end_position=end_position,
+                    doc_tag=text_tag,
+                    question_tag=que_tag)
+                examples.append(example)
+    return examples
 
 
 def read_squad_examples(input_file, is_training):
@@ -181,6 +310,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
     features = []
     for (example_index, example) in enumerate(examples):
         query_tokens = tokenizer.tokenize(example.question_text)
+        query_tags = example.question_tag
+        context_tags = example.doc_tag
 
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
@@ -188,12 +319,15 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         tok_to_orig_index = []
         orig_to_tok_index = []
         all_doc_tokens = []
+
         for (i, token) in enumerate(example.doc_tokens):
             orig_to_tok_index.append(len(all_doc_tokens))
             sub_tokens = tokenizer.tokenize(token)
             for sub_token in sub_tokens:
                 tok_to_orig_index.append(i)
                 all_doc_tokens.append(sub_token)
+
+
 
         tok_start_position = None
         tok_end_position = None
@@ -228,15 +362,21 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
         for (doc_span_index, doc_span) in enumerate(doc_spans):
             tokens = []
+            tag_tokens=[]
             token_to_orig_map = {}
             token_is_max_context = {}
             segment_ids = []
+            tag_tokens.append("[CLS]")
+            if query_tags is not None:
+                tag_tokens.extend(query_tags[:len(query_tokens)])
+            tag_tokens.append("[SEP]")
             tokens.append("[CLS]")
             segment_ids.append(0)
             for token in query_tokens:
                 tokens.append(token)
                 segment_ids.append(0)
             tokens.append("[SEP]")
+
             segment_ids.append(0)
 
             for i in range(doc_span.length):
@@ -247,12 +387,17 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                                                        split_token_index)
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
+                if context_tags is not None:
+                    tag_tokens.append(context_tags[split_token_index])
                 segment_ids.append(1)
+            tag_tokens.append("[SEP]")
             tokens.append("[SEP]")
             segment_ids.append(1)
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
+            input_tags = tokenizer.convert_tags_to_ids(tag_tokens)
+            if len(input_tags) == 3:
+                input_tags = None
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
             # tokens are attended to.
             input_mask = [1] * len(input_ids)
@@ -263,9 +408,13 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 input_mask.append(0)
                 segment_ids.append(0)
 
+            while len(input_tags) < max_seq_length:
+                input_tags.append(0)
+
             assert len(input_ids) == max_seq_length
             assert len(input_mask) == max_seq_length
             assert len(segment_ids) == max_seq_length
+            assert len(input_tags) == max_seq_length
 
             start_position = None
             end_position = None
@@ -319,7 +468,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                     input_mask=input_mask,
                     segment_ids=segment_ids,
                     start_position=start_position,
-                    end_position=end_position))
+                    end_position=end_position,
+                    input_tags=input_tags))
             unique_id += 1
 
     return features
@@ -765,6 +915,9 @@ def main():
     parser.add_argument('--loss_scale',
                         type=float, default=128,
                         help='Loss scaling, positive power of 2 values can improve fp16 convergence.')
+    parser.add_argument('--n_tag', type=int, default=103)
+    parser.add_argument("--train_context_tag_file", default=None, type=str, help="SQuAD context tag for training.")
+    parser.add_argument("--train_question_tag_file", default=None, type=str, help="SQuAD question tag for training.")
 
     args = parser.parse_args()
 
@@ -815,8 +968,9 @@ def main():
     train_examples = None
     num_train_steps = None
     if args.do_train:
-        train_examples = read_squad_examples(
-            input_file=args.train_file, is_training=True)
+        # train_examples = read_squad_examples(input_file=args.train_file, is_training=True)
+        train_examples = read_squad_examples_with_tag(input_file=args.train_file, context_tag_file=args.train_context_tag_file,
+                                                      question_tag_file=args.train_question_tag_file, is_training=True)
         num_train_steps = int(
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
 
@@ -869,8 +1023,9 @@ def main():
         all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
         all_start_positions = torch.tensor([f.start_position for f in train_features], dtype=torch.long)
         all_end_positions = torch.tensor([f.end_position for f in train_features], dtype=torch.long)
+        all_input_tags = torch.tensor([f.input_tags for f in train_features], dtype=torch.long)
         train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids,
-                                   all_start_positions, all_end_positions)
+                                   all_start_positions, all_end_positions, all_input_tags)
         if args.local_rank == -1:
             train_sampler = RandomSampler(train_data)
         else:
@@ -882,8 +1037,8 @@ def main():
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
                 if n_gpu == 1:
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
-                input_ids, input_mask, segment_ids, start_positions, end_positions = batch
-                loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
+                input_ids, input_mask, segment_ids, start_positions, end_positions, input_tags = batch
+                loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions, input_tags=input_tags)
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.fp16 and args.loss_scale != 1.0:
@@ -913,8 +1068,8 @@ def main():
                     global_step += 1
 
     if args.do_predict:
-        eval_examples = read_squad_examples(
-            input_file=args.predict_file, is_training=False)
+        '''
+        eval_examples = read_squad_examples(input_file=args.predict_file, is_training=False)
         eval_features = convert_examples_to_features(
             examples=eval_examples,
             tokenizer=tokenizer,
@@ -922,7 +1077,16 @@ def main():
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
             is_training=False)
-
+        '''
+        eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, context_tag_file=args.dev_context_tag_file,
+                                            question_tag_file=args.dev_question_tag_file,is_training=False)
+        eval_features = convert_examples_to_features(
+            examples=eval_examples,
+            tokenizer=tokenizer,
+            max_seq_length=args.max_seq_length,
+            doc_stride=args.doc_stride,
+            max_query_length=args.max_query_length,
+            is_training=False)
         logger.info("***** Running predictions *****")
         logger.info("  Num orig examples = %d", len(eval_examples))
         logger.info("  Num split examples = %d", len(eval_features))
@@ -932,7 +1096,8 @@ def main():
         all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
         all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
         all_example_index = torch.arange(all_input_ids.size(0), dtype=torch.long)
-        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_example_index)
+        all_input_tags = torch.tensor([f.input_tags for f in eval_features], dtype=torch.long)
+        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_example_index, all_input_tags)
         if args.local_rank == -1:
             eval_sampler = SequentialSampler(eval_data)
         else:
@@ -942,14 +1107,15 @@ def main():
         model.eval()
         all_results = []
         logger.info("Start evaluating")
-        for input_ids, input_mask, segment_ids, example_indices in tqdm(eval_dataloader, desc="Evaluating"):
+        for input_ids, input_mask, segment_ids, example_indices, input_tags in tqdm(eval_dataloader, desc="Evaluating"):
             if len(all_results) % 1000 == 0:
                 logger.info("Processing example: %d" % (len(all_results)))
             input_ids = input_ids.to(device)
             input_mask = input_mask.to(device)
             segment_ids = segment_ids.to(device)
+            input_tags = input_tags.to(device)
             with torch.no_grad():
-                batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask)
+                batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask, input_tags=input_tags)
             for i, example_index in enumerate(example_indices):
                 start_logits = batch_start_logits[i].detach().cpu().tolist()
                 end_logits = batch_end_logits[i].detach().cpu().tolist()

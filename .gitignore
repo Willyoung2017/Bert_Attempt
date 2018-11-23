@@ -1,0 +1,8 @@
+
+*.xml
+*.iml
+bert_models/bert-base-uncased/bert-base-uncased-vocab.txt
+bert_models/bert-base-uncased/bert_config.json
+bert_models/bert-base-uncased/pytorch_model.bin
+bert_models/.DS_Store
+.DS_Store

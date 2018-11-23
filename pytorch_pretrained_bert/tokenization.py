@@ -22,7 +22,8 @@ import collections
 import unicodedata
 import os
 import logging
-
+import pickle
+from os.path import expanduser,join
 from .file_utils import cached_path
 
 logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s', 
@@ -31,12 +32,14 @@ logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(messa
 logger = logging.getLogger(__name__)
 
 PRETRAINED_VOCAB_ARCHIVE_MAP = {
-    'bert-base-uncased':"./bert-base-uncased/bert-base-uncased-vocab.txt",# "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt",
-    'bert-large-uncased':"./bert-large-uncased/bert-large-uncased-vocab.txt",
+    'bert-base-uncased':"./bert_models/bert-base-uncased/bert-base-uncased-vocab.txt",
+    'bert-large-uncased':"./bert_models/bert-large-uncased/bert-large-uncased-vocab.txt",
     'bert-base-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased-vocab.txt",
     'bert-base-multilingual': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-vocab.txt",
     'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese-vocab.txt",
 }
+
+TAG_VOCAB_FILE = join(expanduser("~"),"data","squad","srl_tags","tag_list.pkl")
 
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -76,6 +79,16 @@ def load_vocab(vocab_file):
     return vocab
 
 
+def load_tag_vocab(tag_vocab_file):
+    vocab = ["[CLS]","[SEP]"]
+    if tag_vocab_file is None:
+        return vocab
+    with open(tag_vocab_file, 'rb') as f:
+        vocab_list = pickle.loads(f)
+    vocab.extend(vocab_list)
+    return vocab
+
+
 def whitespace_tokenize(text):
     """Runs basic whitespace cleaning and splitting on a peice of text."""
     text = text.strip()
@@ -87,7 +100,7 @@ def whitespace_tokenize(text):
 
 class BertTokenizer(object):
     """Runs end-to-end tokenization: punctuation splitting + wordpiece"""
-    def __init__(self, vocab_file, do_lower_case=True):
+    def __init__(self, vocab_file, tag_vocab_file=None, do_lower_case=True):
         if not os.path.isfile(vocab_file):
             raise ValueError(
                 "Can't find a vocabulary file at path '{}'. To load the vocabulary from a Google pretrained "
@@ -98,12 +111,25 @@ class BertTokenizer(object):
         self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
         self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
+        if tag_vocab_file is not None:
+            if not os.path.exists(tag_vocab_file):
+                raise ValueError(
+                    "Can't find a vocabulary tag file at path '{}'.".format(tag_vocab_file)
+                )
+        self.tag_vocab = load_tag_vocab(tag_vocab_file)
+
     def tokenize(self, text):
         split_tokens = []
         for token in self.basic_tokenizer.tokenize(text):
             for sub_token in self.wordpiece_tokenizer.tokenize(token):
                 split_tokens.append(sub_token)
         return split_tokens
+
+    def convert_tags_to_ids(self,tags):
+        ids = []
+        for tag in tags:
+            ids.append(self.tag_vocab.index(tag))
+        return ids
 
     def convert_tokens_to_ids(self, tokens):
         """Converts a sequence of tokens into ids using the vocab."""
@@ -131,6 +157,7 @@ class BertTokenizer(object):
             vocab_file = pretrained_model_name
         # redirect to the cache, if necessary
         try:
+            tag_vocab_file = TAG_VOCAB_FILE
             resolved_vocab_file = cached_path(vocab_file)
             if resolved_vocab_file == vocab_file:
                 logger.info("loading vocabulary file {}".format(vocab_file))
@@ -138,7 +165,7 @@ class BertTokenizer(object):
                 logger.info("loading vocabulary file {} from cache at {}".format(
                     vocab_file, resolved_vocab_file))
             # Instantiate tokenizer.
-            tokenizer = cls(resolved_vocab_file, do_lower_case)
+            tokenizer = cls(resolved_vocab_file, tag_vocab_file, do_lower_case)
         except FileNotFoundError:
             logger.error(
                 "Model name '{}' was not found in model name list ({}). "
