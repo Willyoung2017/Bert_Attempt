@@ -918,6 +918,8 @@ def main():
     parser.add_argument('--n_tag', type=int, default=103)
     parser.add_argument("--train_context_tag_file", default=None, type=str, help="SQuAD context tag for training.")
     parser.add_argument("--train_question_tag_file", default=None, type=str, help="SQuAD question tag for training.")
+    parser.add_argument("--predict_context_tag_file", default=None, type=str, help="SQuAD context tag for predicting.")
+    parser.add_argument("--predict_question_tag_file", default=None, type=str, help="SQuAD question tag for predicting.")
 
     args = parser.parse_args()
 
@@ -1078,8 +1080,8 @@ def main():
             max_query_length=args.max_query_length,
             is_training=False)
         '''
-        eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, context_tag_file=args.dev_context_tag_file,
-                                            question_tag_file=args.dev_question_tag_file,is_training=False)
+        eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, context_tag_file=args.predict_context_tag_file,
+                                            question_tag_file=args.predict_question_tag_file,is_training=False)
         eval_features = convert_examples_to_features(
             examples=eval_examples,
             tokenizer=tokenizer,

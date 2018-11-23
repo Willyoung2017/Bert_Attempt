@@ -84,7 +84,7 @@ def load_tag_vocab(tag_vocab_file):
     if tag_vocab_file is None:
         return vocab
     with open(tag_vocab_file, 'rb') as f:
-        vocab_list = pickle.loads(f)
+        vocab_list = pickle.load(f)
     vocab.extend(vocab_list)
     return vocab
 
