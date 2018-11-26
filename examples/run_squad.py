@@ -1018,11 +1018,13 @@ def main():
 
     train_examples = None
     num_train_steps = None
+    simple_nlp = SimpleNlp()
 
     if args.do_train:
         # train_examples = read_squad_examples(input_file=args.train_file, is_training=True)
         train_examples = read_squad_examples_with_tag(input_file=args.train_file, context_tag_file=args.train_context_tag_file,
-                                                      question_tag_file=args.train_question_tag_file, is_training=True)
+                                                      question_tag_file=args.train_question_tag_file, is_training=True,
+                                                      simple_nlp=simple_nlp)
         num_train_steps = int(
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
 
@@ -1131,7 +1133,8 @@ def main():
             is_training=False)
         '''
         eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, context_tag_file=args.predict_context_tag_file,
-                                            question_tag_file=args.predict_question_tag_file,is_training=False)
+                                                     question_tag_file=args.predict_question_tag_file,is_training=False,
+                                                     simple_nlp=simple_nlp)
         eval_features = convert_examples_to_features(
             examples=eval_examples,
             tokenizer=tokenizer,
