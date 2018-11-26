@@ -24,6 +24,7 @@ import logging
 import json
 import math
 import os
+import nltk
 import spacy
 from os.path import expanduser, join
 import random
@@ -115,8 +116,11 @@ class InputFeatures(object):
 
 class SimpleNlp(object):
     def __init__(self):
+        '''
         self.nlp = spacy.load('en', disable=['parser', 'tagger', 'ner', 'textcat'])
         self.nlp.add_pipe(self.nlp.create_pipe('sentencizer'))
+        '''
+        self.nlp = nltk.data.load('tokenizers/punkt/english.pickle').tokenize
 
     def nlp(self, texts):
         return self.nlp(texts)
@@ -168,6 +172,20 @@ def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file
             sen_texts = simple_nlp.nlp(paragraph_text)
             sent_token_list = []
             prev_is_whitespace = True
+            '''
+            for sent in sen_texts.sents:
+                sent_tokens = []
+                for c in sent.string:
+                    if is_whitespace(c):
+                        prev_is_whitespace = True
+                    else:
+                        if prev_is_whitespace:
+                            sent_tokens.append(c)
+                        else:
+                            sent_tokens[-1] += c
+                        prev_is_whitespace = False
+                sent_token_list.append(sent_tokens)
+            '''
             for sent in sen_texts:
                 sent_tokens = []
                 for c in sent:
@@ -180,6 +198,11 @@ def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file
                             sent_tokens[-1] += c
                         prev_is_whitespace = False
                 sent_token_list.append(sent_tokens)
+
+            try:
+                assert len(sent_token_list) == len(text_tag)
+            except ValueError as e:
+                print(len(sent_token_list), " and ", len(text_tag), "not equal.", e)
 
             doc_tokens = []
             char_to_word_offset = []
@@ -355,7 +378,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 tok_to_orig_index.append(i)
                 all_doc_tokens.append(sub_token)
 
-        aligned_context_tag = []
+        aligned_context_tags = []
         for (sent_ix, sent_tokens) in enumerate(example.sent_token_list):
             all_sent_token = []
             sent_tag_tokens = context_tags[sent_ix]
@@ -368,9 +391,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             else:
                 while len(sent_tag_tokens) < len(all_sent_token):
                     sent_tag_tokens.append('O')
-            aligned_context_tag.extend(sent_tag_tokens)
+            aligned_context_tags.extend(sent_tag_tokens)
 
-        assert len(aligned_context_tag) == len(all_doc_tokens)
+        assert len(aligned_context_tags) == len(all_doc_tokens)
 
         tok_start_position = None
         tok_end_position = None
@@ -436,7 +459,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
                 if context_tags is not None:
-                    tag_tokens.append(context_tags[split_token_index])
+                    tag_tokens.append(aligned_context_tags[split_token_index])
                 segment_ids.append(1)
             tag_tokens.append("[SEP]")
             tokens.append("[SEP]")
