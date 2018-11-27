@@ -130,7 +130,7 @@ class SRLPredictor(object):
         return self.predictor.predict(sentence=sent)
 
 
-def read_squad_examples_with_tag(input_file, is_training, simple_nlp):
+def read_squad_examples_with_tag(input_file, is_training, simple_nlp, part_of_data):
     """Read a SQuAD json file into a list of SquadExample."""
     with open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
@@ -141,8 +141,13 @@ def read_squad_examples_with_tag(input_file, is_training, simple_nlp):
         return False
 
     examples = []
-    for entry_ix, entry in enumerate(input_data):
+    length = int(len(input_data)/5)
+    if part_of_data == 5:
+        input_data = input_data[4*length:]
+    else:
+        input_data = input_data[(part_of_data-1)*length:part_of_data*length]
 
+    for entry_ix, entry in enumerate(input_data):
 
         for para_ix, paragraph in enumerate(entry["paragraphs"]):
 
@@ -290,20 +295,22 @@ def read_squad_examples(input_file, is_training):
 
 
 def get_tag_from_token(srl_predictor, token_list):
-    #new_token_list = []
-    #for token in token_list:
-    #    if len(token) > 1:
-    #        token = token.strip('#')
-    #    new_token_list.append(token)
+    new_token_list = []
+    for token in token_list:
+        if len(token) > 1:
+            token = token.strip('#')
+        new_token_list.append(token)
 
     sentence = " ".join(token_list)
     srl_result = srl_predictor.predict(sentence)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
-    #if not(len(sen_words) == len(token_list)):
-    #    print(len(sen_words), len(token_list))
-    #    print(sen_words)
-    #    print(token_list)
+    if not(len(sen_words) == len(token_list)):
+        print("===============================")
+        print(len(sen_words), len(token_list))
+        print(sen_words)
+        print(token_list)
+        print("===============================")
 
     #assert len(sen_words) == len(token_list)
     cnt_tag = 0
@@ -1018,11 +1025,12 @@ def main():
     num_train_steps = None
     simple_nlp = SimpleNlp()
     srl_predictor = SRLPredictor()
+    part_of_data = 1
 
     if args.do_train:
         # train_examples = read_squad_examples(input_file=args.train_file, is_training=True)
         train_examples = read_squad_examples_with_tag(input_file=args.train_file, is_training=True,
-                                                      simple_nlp=simple_nlp)
+                                                      simple_nlp=simple_nlp, part_of_data=part_of_data)
         num_train_steps = int(
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
 
@@ -1066,6 +1074,10 @@ def main():
             max_query_length=args.max_query_length,
             is_training=True,
             srl_predictor=srl_predictor)
+        print("Dumping train", part_of_data)
+        with open("save_data/train_features_"+str(part_of_data), 'wb') as f:
+            pickle.dump(train_features, f)
+        '''
         logger.info("***** Running training *****")
         logger.info("  Num orig examples = %d", len(train_examples))
         logger.info("  Num split examples = %d", len(train_features))
@@ -1119,7 +1131,7 @@ def main():
                         optimizer.step()
                     model.zero_grad()
                     global_step += 1
-
+        '''
     if args.do_predict:
         '''
         eval_examples = read_squad_examples(input_file=args.predict_file, is_training=False)
@@ -1132,7 +1144,7 @@ def main():
             is_training=False)
         '''
         eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, is_training=False,
-                                                     simple_nlp=simple_nlp)
+                                                     simple_nlp=simple_nlp, part_of_data=part_of_data)
         eval_features = convert_examples_to_features(
             examples=eval_examples,
             tokenizer=tokenizer,
@@ -1141,7 +1153,10 @@ def main():
             max_query_length=args.max_query_length,
             is_training=False,
             srl_predictor=srl_predictor)
-
+        print("Dumping eval", part_of_data)
+        with open("save_data/eval_features_"+str(part_of_data), 'wb') as f:
+            pickle.dump(eval_features, f)
+        '''
         logger.info("***** Running predictions *****")
         logger.info("  Num orig examples = %d", len(eval_examples))
         logger.info("  Num split examples = %d", len(eval_features))
@@ -1186,6 +1201,6 @@ def main():
                           args.do_lower_case, output_prediction_file,
                           output_nbest_file, args.verbose_logging)
 
-
+        '''
 if __name__ == "__main__":
     main()
