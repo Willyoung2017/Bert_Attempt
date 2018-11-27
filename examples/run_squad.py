@@ -1075,7 +1075,7 @@ def main():
             is_training=True,
             srl_predictor=srl_predictor)
         print("Dumping train", part_of_data)
-        with open("save_data/train_features_"+str(part_of_data), 'wb') as f:
+        with open("save_data/train_features_"+str(part_of_data)+".pkl", 'wb') as f:
             pickle.dump(train_features, f)
         '''
         logger.info("***** Running training *****")
@@ -1154,7 +1154,7 @@ def main():
             is_training=False,
             srl_predictor=srl_predictor)
         print("Dumping eval", part_of_data)
-        with open("save_data/eval_features_"+str(part_of_data), 'wb') as f:
+        with open("save_data/eval_features_"+str(part_of_data)+".pkl", 'wb') as f:
             pickle.dump(eval_features, f)
         '''
         logger.info("***** Running predictions *****")
