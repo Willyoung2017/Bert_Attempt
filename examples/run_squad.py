@@ -32,6 +32,7 @@ from tqdm import tqdm, trange
 import pickle
 import numpy as np
 import torch
+from srl_model.allennlp.predictors import Predictor
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 
@@ -55,9 +56,7 @@ class SquadExample(object):
                  orig_answer_text=None,
                  start_position=None,
                  end_position=None,
-                 sent_token_list=None,
-                 doc_tag=None,
-                 question_tag=None):
+                 sent_token_list=None):
         self.qas_id = qas_id
         self.question_text = question_text
         self.doc_tokens = doc_tokens
@@ -65,8 +64,6 @@ class SquadExample(object):
         self.start_position = start_position
         self.end_position = end_position
         self.sent_token_list = sent_token_list
-        self.doc_tag=doc_tag
-        self.question_tag=question_tag
 
     def __str__(self):
         return self.__repr__()
@@ -114,24 +111,29 @@ class InputFeatures(object):
         self.end_position = end_position
         self.input_tags = input_tags
 
+
 class SimpleNlp(object):
     def __init__(self):
-        '''
         self.nlp = spacy.load('en', disable=['parser', 'tagger', 'ner', 'textcat'])
         self.nlp.add_pipe(self.nlp.create_pipe('sentencizer'))
-        '''
-        self.nlp = nltk.data.load('tokenizers/punkt/english.pickle').tokenize
+        #self.nlp = nltk.data.load('tokenizers/punkt/english.pickle').tokenize
 
-    def nlp(self, texts):
-        return self.nlp(texts)
+    def nlp(self, text):
+        return self.nlp(text)
 
-def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file, is_training, simple_nlp):
+
+class SRLPredictor(object):
+    def __int__(self):
+        self.predictor = Predictor.from_path("srl_model/model/srl-model-2018.05.25.tar.gz")
+
+    def predict(self, sent):
+        return self.predictor.predict(sentence=sent)
+
+
+def read_squad_examples_with_tag(input_file, is_training, simple_nlp):
     """Read a SQuAD json file into a list of SquadExample."""
     with open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
-
-    context_tag_data = list(open(context_tag_file, 'r'))
-    question_tag_data = list(open(question_tag_file, 'r'))
 
     def is_whitespace(c):
         if c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F:
@@ -140,41 +142,17 @@ def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file
 
     examples = []
     for entry_ix, entry in enumerate(input_data):
-        context_tag = json.loads(context_tag_data[entry_ix])
-        question_tag = json.loads(question_tag_data[entry_ix])
+
 
         for para_ix, paragraph in enumerate(entry["paragraphs"]):
-            text_tag = []
-            context_tag_para = context_tag['paragraphs'][para_ix]
-            question_tag_para = question_tag['paragraphs'][para_ix]
-
-            for senix, sen in enumerate(context_tag_para['sentences']):
-                sen_srl = sen['srl']
-                cnt_sen_tag = 0
-                tag_ix = 0
-                sen_words = sen_srl['words']
-                sen_verbs = sen_srl['verbs']
-                if len(sen_verbs) == 0:
-                    sen_tag = ["O"] * len(sen_words)
-                else:
-                    for ix, verb_tag in enumerate(sen_verbs):
-                        cnt_tmp_tag = 0
-                        for tag in verb_tag['tags']:
-                            if tag != 'O':
-                                cnt_tmp_tag = cnt_tmp_tag + 1
-                        if cnt_tmp_tag > cnt_sen_tag:
-                            cnt_sen_tag = cnt_tmp_tag
-                            tag_ix = ix
-                    sen_tag = sen_verbs[tag_ix]['tags']
-                text_tag.append(sen_tag)
 
             paragraph_text = paragraph["context"]
             sen_texts = simple_nlp.nlp(paragraph_text)
             sent_token_list = []
-            prev_is_whitespace = True
-            '''
+
             for sent in sen_texts.sents:
                 sent_tokens = []
+                prev_is_whitespace = True
                 for c in sent.string:
                     if is_whitespace(c):
                         prev_is_whitespace = True
@@ -185,24 +163,6 @@ def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file
                             sent_tokens[-1] += c
                         prev_is_whitespace = False
                 sent_token_list.append(sent_tokens)
-            '''
-            for sent in sen_texts:
-                sent_tokens = []
-                for c in sent:
-                    if is_whitespace(c):
-                        prev_is_whitespace = True
-                    else:
-                        if prev_is_whitespace:
-                            sent_tokens.append(c)
-                        else:
-                            sent_tokens[-1] += c
-                        prev_is_whitespace = False
-                sent_token_list.append(sent_tokens)
-
-            try:
-                assert len(sent_token_list) == len(text_tag)
-            except ValueError as e:
-                print(len(sent_token_list), " and ", len(text_tag), "not equal.", e)
 
             doc_tokens = []
             char_to_word_offset = []
@@ -219,27 +179,6 @@ def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file
                 char_to_word_offset.append(len(doc_tokens) - 1)
 
             for qa_ix, qa in enumerate(paragraph["qas"]):
-                question_tags = question_tag_para['qas'][qa_ix]
-                question_srl = question_tags['srl']
-                cnt_question_tag = 0
-                tag_ix = 0
-                question_words = question_srl['words']
-                question_verbs = question_srl['verbs']
-
-                if len(question_verbs) == 0:
-                    que_tag = ["O"] * len(question_words)
-                else:
-                    for ix, verb_tag in enumerate(question_verbs):
-                        cnt_tmp_tag = 0
-                        for tag in verb_tag['tags']:
-                            if tag != 'O':
-                                cnt_tmp_tag = cnt_tmp_tag + 1
-                        if cnt_tmp_tag > cnt_question_tag:
-                            cnt_question_tag = cnt_tmp_tag
-                            tag_ix = ix
-                    que_tag = question_verbs[tag_ix]['tags']
-                    #for word_ix, word in enumerate(question_words):
-                    #    word_to_tag[para_ix, qa_ix, word_ix] =
                 qas_id = qa["id"]
                 question_text = qa["question"]
                 start_position = None
@@ -276,9 +215,7 @@ def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file
                     orig_answer_text=orig_answer_text,
                     start_position=start_position,
                     end_position=end_position,
-                    sent_token_list=sent_token_list,
-                    doc_tag=text_tag,
-                    question_tag=que_tag)
+                    sent_token_list=sent_token_list)
                 examples.append(example)
     return examples
 
@@ -352,8 +289,32 @@ def read_squad_examples(input_file, is_training):
     return examples
 
 
+def get_tag_from_token(srl_predictor, token_list):
+    sentence = " ".join(token_list)
+    srl_result = srl_predictor.predict(sentence)
+    sen_verbs = srl_result['verbs']
+    sen_words = srl_result['words']
+    assert len(sen_words) == len(token_list)
+    cnt_tag = 0
+    tag_ix = 0
+    if len(sen_verbs) == 0:
+        sent_tag = ["O"] * len(sen_words)
+    else:
+        for ix, verb_tag in enumerate(sen_verbs):
+            cnt_tmp_tag = 0
+            for tag in verb_tag['tags']:
+                if tag != 'O':
+                    cnt_tmp_tag = cnt_tmp_tag + 1
+            if cnt_tmp_tag > cnt_tag:
+                cnt_tag = cnt_tmp_tag
+                tag_ix = ix
+        sent_tag = sen_verbs[tag_ix]['tags']
+
+    return sent_tag
+
+
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
-                                 doc_stride, max_query_length, is_training):
+                                 doc_stride, max_query_length, is_training, srl_predictor):
     """Loads a data file into a list of `InputBatch`s."""
 
     unique_id = 1000000000
@@ -361,11 +322,13 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
     features = []
     for (example_index, example) in enumerate(examples):
         query_tokens = tokenizer.tokenize(example.question_text)
-        query_tags = example.question_tag
-        context_tags = example.doc_tag
 
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
+
+        query_tags = get_tag_from_token(srl_predictor, query_tokens)
+
+        assert len(query_tags) == len(query_tokens)
 
         tok_to_orig_index = []
         orig_to_tok_index = []
@@ -380,18 +343,15 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
         aligned_context_tags = []
         for (sent_ix, sent_tokens) in enumerate(example.sent_token_list):
-            all_sent_token = []
-            sent_tag_tokens = context_tags[sent_ix]
+            all_sent_tokens = []
+
             for token in sent_tokens:
-                sub_tokens = tokenizer.tokenizer(token)
+                sub_tokens = tokenizer.tokenize(token)
                 for sub_token in sub_tokens:
-                    all_sent_token.append(sub_token)
-            if len(all_sent_token) <= len(sent_tag_tokens):
-                sent_tag_tokens = sent_tag_tokens[:len(all_sent_token)]
-            else:
-                while len(sent_tag_tokens) < len(all_sent_token):
-                    sent_tag_tokens.append('O')
-            aligned_context_tags.extend(sent_tag_tokens)
+                    all_sent_tokens.append(sub_token)
+
+            sent_tag = get_tag_from_token(srl_predictor, all_sent_tokens)
+            aligned_context_tags.extend(sent_tag)
 
         assert len(aligned_context_tags) == len(all_doc_tokens)
 
@@ -432,15 +392,11 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             token_to_orig_map = {}
             token_is_max_context = {}
             segment_ids = []
-            tag_tokens.append("[CLS]")
-            if query_tags is not None:
-                for i in range(len(query_tokens)):
-                    if i >= len(query_tags):
-                        tag_tokens.append("O")
-                    else:
-                        tag_tokens.append(query_tags[i])
 
+            tag_tokens.append("[CLS]")
+            tag_tokens.extend(query_tags)
             tag_tokens.append("[SEP]")
+
             tokens.append("[CLS]")
             segment_ids.append(0)
             for token in query_tokens:
@@ -458,9 +414,11 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                                                        split_token_index)
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
-                if context_tags is not None:
-                    tag_tokens.append(aligned_context_tags[split_token_index])
+
+                tag_tokens.append(aligned_context_tags[split_token_index])
+
                 segment_ids.append(1)
+
             tag_tokens.append("[SEP]")
             tokens.append("[SEP]")
             segment_ids.append(1)
@@ -510,6 +468,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 logger.info("doc_span_index: %s" % (doc_span_index))
                 logger.info("tokens: %s" % " ".join(
                     [printable_text(x) for x in tokens]))
+                logger.info("tags: %s" % " ".join(
+                    [printable_text(x) for x in tag_tokens]))
                 logger.info("token_to_orig_map: %s" % " ".join([
                     "%d:%d" % (x, y) for (x, y) in token_to_orig_map.items()]))
                 logger.info("token_is_max_context: %s" % " ".join([
@@ -987,10 +947,6 @@ def main():
                         type=float, default=128,
                         help='Loss scaling, positive power of 2 values can improve fp16 convergence.')
     parser.add_argument('--n_tag', type=int, default=103)
-    parser.add_argument("--train_context_tag_file", default=None, type=str, help="SQuAD context tag for training.")
-    parser.add_argument("--train_question_tag_file", default=None, type=str, help="SQuAD question tag for training.")
-    parser.add_argument("--predict_context_tag_file", default=None, type=str, help="SQuAD context tag for predicting.")
-    parser.add_argument("--predict_question_tag_file", default=None, type=str, help="SQuAD question tag for predicting.")
     parser.add_argument('--do_lower_case', type=bool, default=True)
     
     args = parser.parse_args()
@@ -1042,11 +998,11 @@ def main():
     train_examples = None
     num_train_steps = None
     simple_nlp = SimpleNlp()
+    srl_predictor = SRLPredictor()
 
     if args.do_train:
         # train_examples = read_squad_examples(input_file=args.train_file, is_training=True)
-        train_examples = read_squad_examples_with_tag(input_file=args.train_file, context_tag_file=args.train_context_tag_file,
-                                                      question_tag_file=args.train_question_tag_file, is_training=True,
+        train_examples = read_squad_examples_with_tag(input_file=args.train_file, is_training=True,
                                                       simple_nlp=simple_nlp)
         num_train_steps = int(
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
@@ -1089,7 +1045,8 @@ def main():
             max_seq_length=args.max_seq_length,
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
-            is_training=True)
+            is_training=True,
+            srl_predictor=srl_predictor)
         logger.info("***** Running training *****")
         logger.info("  Num orig examples = %d", len(train_examples))
         logger.info("  Num split examples = %d", len(train_features))
@@ -1155,8 +1112,7 @@ def main():
             max_query_length=args.max_query_length,
             is_training=False)
         '''
-        eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, context_tag_file=args.predict_context_tag_file,
-                                                     question_tag_file=args.predict_question_tag_file,is_training=False,
+        eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, is_training=False,
                                                      simple_nlp=simple_nlp)
         eval_features = convert_examples_to_features(
             examples=eval_examples,
@@ -1164,7 +1120,8 @@ def main():
             max_seq_length=args.max_seq_length,
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
-            is_training=False)
+            is_training=False,
+            srl_predictor=srl_predictor)
 
         logger.info("***** Running predictions *****")
         logger.info("  Num orig examples = %d", len(eval_examples))

@@ -7,3 +7,8 @@ bert_models/bert-base-uncased/pytorch_model.bin
 bert_models/.DS_Store
 .DS_Store
 *.pyc
+srl_model/allen_test.py
+srl_model/allen_test2.py
+*.jsonnet
+*.json
+srl_model/model/srl-model-2018.05.25.tar.gz

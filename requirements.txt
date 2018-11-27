@@ -7,3 +7,7 @@ tqdm
 boto3
 # Used for downloading models over HTTP
 requests
+# Other packages
+spacy
+nltk
+numpy
