@@ -32,7 +32,7 @@ from tqdm import tqdm, trange
 import pickle
 import numpy as np
 import torch
-from srl_model.allennlp.predictors import Predictor
+from srl_model.predictors import Predictor
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 

@@ -1,0 +1,1 @@
+from srl_model.semparse.contexts.table_question_knowledge_graph import TableQuestionKnowledgeGraph

@@ -1,0 +1,6 @@
+from srl_model.modules.matrix_attention.matrix_attention import MatrixAttention
+from srl_model.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
+from srl_model.modules.matrix_attention.cosine_matrix_attention import CosineMatrixAttention
+from srl_model.modules.matrix_attention.dot_product_matrix_attention import DotProductMatrixAttention
+from srl_model.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
+from srl_model.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention

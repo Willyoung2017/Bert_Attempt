@@ -1,0 +1,1 @@
+from srl_model.models.coreference_resolution.coref import CoreferenceResolver
