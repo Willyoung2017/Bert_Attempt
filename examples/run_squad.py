@@ -301,7 +301,7 @@ def get_tag_from_token(srl_predictor, token_list):
             token = token.strip('#')
         new_token_list.append(token)
 
-    sentence = " ".join(token_list)
+    sentence = " ".join(new_token_list)
     srl_result = srl_predictor.predict(sentence)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
