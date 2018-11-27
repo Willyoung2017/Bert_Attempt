@@ -292,13 +292,19 @@ def read_squad_examples(input_file, is_training):
 def get_tag_from_token(srl_predictor, token_list):
     new_token_list = []
     for token in token_list:
-        token = token.strip('#')
+        if len(token) > 1:
+            token = token.strip('#')
         new_token_list.append(token)
 
     sentence = " ".join(new_token_list)
     srl_result = srl_predictor.predict(sentence)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
+    if not(len(sen_words) == len(token_list)):
+        print(len(sen_words), len(token_list))
+        print(sen_words)
+        print(token_list)
+
     assert len(sen_words) == len(token_list)
     cnt_tag = 0
     tag_ix = 0
@@ -325,7 +331,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
     unique_id = 1000000000
 
     features = []
-    for (example_index, example) in enumerate(examples):
+    for (example_index, example) in tqdm(enumerate(examples),ncols=80, total=len(examples)):
         query_tokens = tokenizer.tokenize(example.question_text)
 
         if len(query_tokens) > max_query_length:
@@ -465,8 +471,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 doc_offset = len(query_tokens) + 2
                 start_position = tok_start_position - doc_start + doc_offset
                 end_position = tok_end_position - doc_start + doc_offset
-
+            '''
             if example_index < 20:
+                
                 logger.info("*** Example ***")
                 logger.info("unique_id: %s" % (unique_id))
                 logger.info("example_index: %s" % (example_index))
@@ -485,13 +492,14 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                     "input_mask: %s" % " ".join([str(x) for x in input_mask]))
                 logger.info(
                     "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+                
                 if is_training:
                     answer_text = " ".join(tokens[start_position:(end_position + 1)])
-                    logger.info("start_position: %d" % (start_position))
-                    logger.info("end_position: %d" % (end_position))
-                    logger.info(
-                        "answer: %s" % (printable_text(answer_text)))
-
+                    #logger.info("start_position: %d" % (start_position))
+                    #logger.info("end_position: %d" % (end_position))
+                    #logger.info(
+                    #    "answer: %s" % (printable_text(answer_text)))
+            '''
             features.append(
                 InputFeatures(
                     unique_id=unique_id,
