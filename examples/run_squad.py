@@ -123,7 +123,7 @@ class SimpleNlp(object):
 
 
 class SRLPredictor(object):
-    def __int__(self):
+    def __init__(self):
         self.predictor = Predictor.from_path("srl_model/model/srl-model-2018.05.25.tar.gz")
 
     def predict(self, sent):
@@ -290,7 +290,12 @@ def read_squad_examples(input_file, is_training):
 
 
 def get_tag_from_token(srl_predictor, token_list):
-    sentence = " ".join(token_list)
+    new_token_list = []
+    for token in token_list:
+        token = token.strip('#')
+        new_token_list.append(token)
+
+    sentence = " ".join(new_token_list)
     srl_result = srl_predictor.predict(sentence)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
