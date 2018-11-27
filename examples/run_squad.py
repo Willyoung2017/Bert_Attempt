@@ -290,22 +290,22 @@ def read_squad_examples(input_file, is_training):
 
 
 def get_tag_from_token(srl_predictor, token_list):
-    new_token_list = []
-    for token in token_list:
-        if len(token) > 1:
-            token = token.strip('#')
-        new_token_list.append(token)
+    #new_token_list = []
+    #for token in token_list:
+    #    if len(token) > 1:
+    #        token = token.strip('#')
+    #    new_token_list.append(token)
 
-    sentence = " ".join(new_token_list)
+    sentence = " ".join(token_list)
     srl_result = srl_predictor.predict(sentence)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
-    if not(len(sen_words) == len(token_list)):
-        print(len(sen_words), len(token_list))
-        print(sen_words)
-        print(token_list)
+    #if not(len(sen_words) == len(token_list)):
+    #    print(len(sen_words), len(token_list))
+    #    print(sen_words)
+    #    print(token_list)
 
-    assert len(sen_words) == len(token_list)
+    #assert len(sen_words) == len(token_list)
     cnt_tag = 0
     tag_ix = 0
     if len(sen_verbs) == 0:
@@ -320,6 +320,12 @@ def get_tag_from_token(srl_predictor, token_list):
                 cnt_tag = cnt_tmp_tag
                 tag_ix = ix
         sent_tag = sen_verbs[tag_ix]['tags']
+    if len(sent_tag) < len(token_list):
+        sent_tag.extend(['O']*(len(token_list)-len(sent_tag)))
+    else:
+        sent_tag = sent_tag[:len(token_list)]
+
+    assert len(sent_tag) == len(token_list)
 
     return sent_tag
 
