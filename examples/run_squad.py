@@ -336,7 +336,7 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
     cnt_sen_words = 0
     cnt = 0
     while cnt < len(token_list):
-        sen_word = sen_words[cnt_sen_words]
+        sen_word = sen_words[cnt_sen_words].lower()
         token = token_list[cnt]
         new_token = token
         cnt += 1
@@ -345,21 +345,29 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
 
         while (sen_word != new_token) and (cnt < len(token_list)):
             nxt_token = token_list[cnt]
+            '''
             if nxt_token[0] != '#':
                 print("=============================")
                 print(sen_word, new_token, nxt_token)
-                print(token_list, sen_word)
+                print(token_list, sen_words)
                 print("=============================")
 
             assert nxt_token[0] == '#'
-
+            '''
             new_token = new_token.strip('#') + nxt_token.strip('#')
             cnt += 1
             if sent_tag[cnt_sen_words][0]=='B':
                 new_sent_tag.append('I'+sent_tag[cnt_sen_words][1:])
             else:
                 new_sent_tag.append(sent_tag[cnt_sen_words])
+                
+        if sen_word != new_token:
+            print("=============================")
+            print(sen_word, new_token)
+            print(token_list, sen_words)
+            print("=============================")
 
+        assert sen_word == new_token
         cnt_sen_words += 1
 
     '''
