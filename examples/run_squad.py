@@ -141,9 +141,9 @@ def read_squad_examples_with_tag(input_file, is_training, simple_nlp, part_of_da
         return False
 
     examples = []
-    length = int(len(input_data)/5)
-    if part_of_data == 5:
-        input_data = input_data[4*length:]
+    length = int(len(input_data)/10)
+    if part_of_data == 10:
+        input_data = input_data[9*length:]
     else:
         input_data = input_data[(part_of_data-1)*length:part_of_data*length]
 
@@ -974,6 +974,7 @@ def main():
                         help='Loss scaling, positive power of 2 values can improve fp16 convergence.')
     parser.add_argument('--n_tag', type=int, default=103)
     parser.add_argument('--do_lower_case', type=bool, default=True)
+    parser.add_argument("--part_of_data", type=int, default=4)
     
     args = parser.parse_args()
 

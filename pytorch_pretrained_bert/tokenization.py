@@ -128,6 +128,8 @@ class BertTokenizer(object):
     def convert_tags_to_ids(self,tags):
         ids = []
         for tag in tags:
+            if tag not in self.tag_vocab:
+                self.tag_vocab.append(tag)
             ids.append(self.tag_vocab.index(tag))
         return ids
 
