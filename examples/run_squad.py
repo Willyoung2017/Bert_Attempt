@@ -32,6 +32,7 @@ from tqdm import tqdm, trange
 import pickle
 import numpy as np
 import torch
+import unicodedata
 from srl_model.predictors import Predictor
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -294,6 +295,18 @@ def read_squad_examples(input_file, is_training):
     return examples
 
 
+def run_strip_accents(text):
+    """Strips accents from a piece of text."""
+    text = unicodedata.normalize("NFD", text)
+    output = []
+    for char in text:
+        cat = unicodedata.category(char)
+        if cat == "Mn":
+            continue
+        output.append(char)
+    return "".join(output)
+
+
 def get_tag_from_token(srl_predictor, token_list, org_sent):
     """
     new_token_list = []
@@ -339,35 +352,43 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
         sen_word = sen_words[cnt_sen_words].lower()
         token = token_list[cnt]
         new_token = token
+        if len(token) > 1:
+            new_token = token.strip('#')
         cnt += 1
-
         new_sent_tag.append(sent_tag[cnt_sen_words])
-
+        if new_token == "[UNK]":
+            cnt_sen_words += 1
+            continue
         while (sen_word != new_token) and (cnt < len(token_list)):
             nxt_token = token_list[cnt]
-            '''
-            if nxt_token[0] != '#':
-                print("=============================")
-                print(sen_word, new_token, nxt_token)
-                print(token_list, sen_words)
-                print("=============================")
-
-            assert nxt_token[0] == '#'
-            '''
             new_token = new_token.strip('#') + nxt_token.strip('#')
             cnt += 1
-            if sent_tag[cnt_sen_words][0]=='B':
-                new_sent_tag.append('I'+sent_tag[cnt_sen_words][1:])
+            if sent_tag[cnt_sen_words][0] == 'B':
+                new_sent_tag.append('I' + sent_tag[cnt_sen_words][1:])
             else:
                 new_sent_tag.append(sent_tag[cnt_sen_words])
-                
-        if sen_word != new_token:
+            if nxt_token == '[UNK]':
+                if cnt_sen_words < len(sen_words) - 1:
+                    sen_word = sen_words[cnt_sen_words + 1].lower()
+                    while cnt < len(token_list):
+                        new_token = token_list[cnt]
+                        cnt += 1
+                        if len(new_token) > 1:
+                            new_token = new_token.strip("#")
+                        if new_token[0] == sen_word[0]:
+                            cnt_sen_words += 1
+                            new_sent_tag.append(sent_tag[cnt_sen_words])
+                            break
+                        if sent_tag[cnt_sen_words][0] == 'B':
+                            new_sent_tag.append('I' + sent_tag[cnt_sen_words][1:])
+                        else:
+                            new_sent_tag.append(sent_tag[cnt_sen_words])
+        if (sen_word != new_token) and ("[UNK]" not in new_token):
             print("=============================")
             print(sen_word, new_token)
-            print(token_list, sen_words)
+            print(sen_words, token_list)
             print("=============================")
-
-        assert sen_word == new_token
+        assert (sen_word == new_token) or ("[UNK]" in new_token)
         cnt_sen_words += 1
 
     '''
