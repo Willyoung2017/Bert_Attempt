@@ -294,7 +294,8 @@ def read_squad_examples(input_file, is_training):
     return examples
 
 
-def get_tag_from_token(srl_predictor, token_list):
+def get_tag_from_token(srl_predictor, token_list, org_sent):
+    """
     new_token_list = []
     for token in token_list:
         if len(token) > 1:
@@ -302,7 +303,9 @@ def get_tag_from_token(srl_predictor, token_list):
         new_token_list.append(token)
 
     sentence = " ".join(new_token_list)
-    srl_result = srl_predictor.predict(sentence)
+    """
+    #srl_result = srl_predictor.predict(sentence)
+    srl_result = srl_predictor.predict(org_sent)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
     '''
@@ -331,17 +334,34 @@ def get_tag_from_token(srl_predictor, token_list):
 
     new_sent_tag = []
     cnt_sen_words = 0
-    for i in range(len(new_token_list)):
+    cnt = 0
+    while cnt < len(token_list):
         sen_word = sen_words[cnt_sen_words]
-        new_token = new_token_list[i]
-        if not(sen_word == new_token):
-            sen_word = sen_word + sen_words[cnt_sen_words+1]
-            assert sen_word == new_token
-            new_sent_tag.append(sent_tag[cnt_sen_words])
-            cnt_sen_words += 2
-        else:
-            new_sent_tag.append(sent_tag[cnt_sen_words])
-            cnt_sen_words += 1
+        token = token_list[cnt]
+        new_token = token
+        cnt += 1
+
+        new_sent_tag.append(sent_tag[cnt_sen_words])
+
+        while (sen_word != new_token) and (cnt < len(token_list)):
+            nxt_token = token_list[cnt]
+            if nxt_token[0] != '#':
+                print("=============================")
+                print(sen_word, new_token, nxt_token)
+                print(token_list, sen_word)
+                print("=============================")
+
+            assert nxt_token[0] == '#'
+
+            new_token = new_token.strip('#') + nxt_token.strip('#')
+            cnt += 1
+            if sent_tag[cnt_sen_words][0]=='B':
+                new_sent_tag.append('I'+sent_tag[cnt_sen_words][1:])
+            else:
+                new_sent_tag.append(sent_tag[cnt_sen_words])
+
+        cnt_sen_words += 1
+
     '''
     if len(sent_tag) < len(token_list):
         sent_tag.extend(['O']*(len(token_list)-len(sent_tag)))
@@ -373,7 +393,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
 
-        query_tags = get_tag_from_token(srl_predictor, query_tokens)
+        query_tags = get_tag_from_token(srl_predictor, query_tokens, example.question_text)
 
         assert len(query_tags) == len(query_tokens)
 
@@ -397,7 +417,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 for sub_token in sub_tokens:
                     all_sent_tokens.append(sub_token)
 
-            sent_tag = get_tag_from_token(srl_predictor, all_sent_tokens)
+            sent_tag = get_tag_from_token(srl_predictor, all_sent_tokens, " ".join(sent_tokens))
             aligned_context_tags.extend(sent_tag)
 
         assert len(aligned_context_tags) == len(all_doc_tokens)
@@ -471,7 +491,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             segment_ids.append(1)
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
-            input_tags = tokenizer.convert_tags_to_ids(tag_tokens)
+            #input_tags = tokenizer.convert_tags_to_ids(tag_tokens)
+            input_tags = tag_tokens
             if len(input_tags) == 3:
                 input_tags = None
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
