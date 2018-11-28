@@ -1151,12 +1151,11 @@ def main():
     num_train_steps = None
     simple_nlp = SimpleNlp()
     srl_predictor = SRLPredictor()
-    part_of_data = 1
 
     if args.do_train:
         # train_examples = read_squad_examples(input_file=args.train_file, is_training=True)
         train_examples = read_squad_examples_with_tag(input_file=args.train_file, is_training=True,
-                                                      simple_nlp=simple_nlp, part_of_data=part_of_data)
+                                                      simple_nlp=simple_nlp, part_of_data=args.part_of_data)
         num_train_steps = int(
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
 
