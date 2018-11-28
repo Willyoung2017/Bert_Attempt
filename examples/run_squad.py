@@ -305,13 +305,14 @@ def get_tag_from_token(srl_predictor, token_list):
     srl_result = srl_predictor.predict(sentence)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
+    '''
     if not(len(sen_words) == len(token_list)):
         print("===============================")
         print(len(sen_words), len(token_list))
         print(sen_words)
         print(token_list)
         print("===============================")
-
+    '''
     #assert len(sen_words) == len(token_list)
     cnt_tag = 0
     tag_ix = 0
@@ -327,14 +328,36 @@ def get_tag_from_token(srl_predictor, token_list):
                 cnt_tag = cnt_tmp_tag
                 tag_ix = ix
         sent_tag = sen_verbs[tag_ix]['tags']
+
+    new_sent_tag = []
+    cnt_sen_words = 0
+    for i in range(len(new_token_list)):
+        sen_word = sen_words[cnt_sen_words]
+        new_token = new_token_list[i]
+        if not(sen_word == new_token):
+            sen_word = sen_word + sen_words[cnt_sen_words+1]
+            assert sen_word == new_token
+            new_sent_tag.append(sent_tag[cnt_sen_words])
+            cnt_sen_words += 2
+        else:
+            new_sent_tag.append(sent_tag[cnt_sen_words])
+            cnt_sen_words += 1
+    '''
     if len(sent_tag) < len(token_list):
         sent_tag.extend(['O']*(len(token_list)-len(sent_tag)))
     else:
         sent_tag = sent_tag[:len(token_list)]
+    '''
+    if not(len(new_sent_tag) == len(token_list)):
+        print("===============================")
+        print(len(new_sent_tag), len(token_list))
+        print(new_sent_tag)
+        print(token_list)
+        print("===============================")
 
-    assert len(sent_tag) == len(token_list)
+    assert len(new_sent_tag) == len(token_list)
 
-    return sent_tag
+    return new_sent_tag
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
