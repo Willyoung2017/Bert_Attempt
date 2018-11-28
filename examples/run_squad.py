@@ -147,7 +147,7 @@ def read_squad_examples_with_tag(input_file, is_training, simple_nlp, part_of_da
         input_data = input_data[9*length:]
     else:
         input_data = input_data[(part_of_data-1)*length:part_of_data*length]
-
+    print("Start reading " + str(part_of_data) + " of length " + str(len(input_data)))
     for entry_ix, entry in enumerate(input_data):
 
         for para_ix, paragraph in enumerate(entry["paragraphs"]):
@@ -383,14 +383,11 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
     new_sent_tag = []
     cnt_sen_words = 0
     cnt = 0
-    tmp_cnt = 0
     flag = False
     sen_word = ""
-    tmp_new_sent_tag = []
     while cnt < len(token_list):
         if flag:
             sen_word = sen_word + run_strip_accents(sen_words[cnt_sen_words].lower())
-            new_sent_tag = tmp_new_sent_tag.copy()
             #print(tmp_new_sent_tag)
         else:
             sen_word = run_strip_accents(sen_words[cnt_sen_words].lower())
@@ -440,6 +437,8 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
             print("=============================")
             flag = True
             cnt = tmp_cnt
+            new_sent_tag = tmp_new_sent_tag.copy()
+
         # assert (sen_word == new_token) or ("[UNK]" in new_token)
         cnt_sen_words += 1
 
