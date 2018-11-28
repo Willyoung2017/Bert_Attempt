@@ -307,6 +307,40 @@ def run_strip_accents(text):
     return "".join(output)
 
 
+
+def is_punctuation(char):
+    """Checks whether `chars` is a punctuation character."""
+    cp = ord(char)
+    if ((cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or
+            (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126)):
+        return True
+    cat = unicodedata.category(char)
+    if cat.startswith("P"):
+        return True
+    return False
+
+
+def run_split_on_punc(text):
+    """Splits punctuation on a piece of text."""
+    chars = list(text)
+    i = 0
+    start_new_word = True
+    output = []
+    while i < len(chars):
+        char = chars[i]
+        if is_punctuation(char):
+            output.append([char])
+            start_new_word = True
+        else:
+            if start_new_word:
+                output.append([])
+            start_new_word = False
+            output[-1].append(char)
+        i += 1
+
+    return ["".join(x) for x in output]
+
+
 def get_tag_from_token(srl_predictor, token_list, org_sent):
     """
     new_token_list = []
@@ -318,7 +352,8 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
     sentence = " ".join(new_token_list)
     """
     #srl_result = srl_predictor.predict(sentence)
-    srl_result = srl_predictor.predict(org_sent)
+    #org_tokens = run_split_on_punc(org_sent)
+    srl_result = srl_predictor.predict(org_sent)#" ".join(org_tokens))
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
     '''
@@ -348,17 +383,32 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
     new_sent_tag = []
     cnt_sen_words = 0
     cnt = 0
+    tmp_cnt = 0
+    flag = False
+    sen_word = ""
+    tmp_new_sent_tag = []
     while cnt < len(token_list):
-        sen_word = run_strip_accents(sen_words[cnt_sen_words].lower())
+        if flag:
+            sen_word = sen_word + run_strip_accents(sen_words[cnt_sen_words].lower())
+            new_sent_tag = tmp_new_sent_tag.copy()
+            #print(tmp_new_sent_tag)
+        else:
+            sen_word = run_strip_accents(sen_words[cnt_sen_words].lower())
         token = token_list[cnt]
         new_token = token
         if len(token) > 1:
             new_token = token.strip('#')
+        tmp_cnt = cnt
         cnt += 1
-        new_sent_tag.append(sent_tag[cnt_sen_words])
+        if not flag:
+            new_sent_tag.append(sent_tag[cnt_sen_words])
+        else:
+            flag = False
+        tmp_new_sent_tag = new_sent_tag.copy()
         if new_token == "[UNK]":
             cnt_sen_words += 1
             continue
+        #print(sen_word, new_token)
         while (sen_word != new_token) and (cnt < len(token_list)):
             nxt_token = token_list[cnt]
             new_token = new_token.strip('#') + nxt_token.strip('#')
@@ -388,7 +438,9 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
             print(sen_word, new_token)
             print(sen_words, token_list)
             print("=============================")
-        assert (sen_word == new_token) or ("[UNK]" in new_token)
+            flag = True
+            cnt = tmp_cnt
+        # assert (sen_word == new_token) or ("[UNK]" in new_token)
         cnt_sen_words += 1
 
     '''
@@ -401,6 +453,7 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
         print("===============================")
         print(len(new_sent_tag), len(token_list))
         print(new_sent_tag)
+        print(sen_words)
         print(token_list)
         print("===============================")
 
