@@ -349,7 +349,7 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
     cnt_sen_words = 0
     cnt = 0
     while cnt < len(token_list):
-        sen_word = sen_words[cnt_sen_words].lower()
+        sen_word = run_strip_accents(sen_words[cnt_sen_words].lower())
         token = token_list[cnt]
         new_token = token
         if len(token) > 1:
@@ -369,7 +369,7 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
                 new_sent_tag.append(sent_tag[cnt_sen_words])
             if nxt_token == '[UNK]':
                 if cnt_sen_words < len(sen_words) - 1:
-                    sen_word = sen_words[cnt_sen_words + 1].lower()
+                    sen_word = run_strip_accents(sen_words[cnt_sen_words + 1].lower())
                     while cnt < len(token_list):
                         new_token = token_list[cnt]
                         cnt += 1
