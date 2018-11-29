@@ -295,32 +295,22 @@ def read_squad_examples(input_file, is_training):
     return examples
 
 
-def get_tag_from_token(srl_predictor, token_list, org_sent, tokenizer):
-    """
-    new_token_list = []
-    for token in token_list:
-        if len(token) > 1:
-            token = token.strip('#')
-        new_token_list.append(token)
+def get_tag_from_token(srl_predictor, token_list):
 
-    sentence = " ".join(new_token_list)
-    """
-    processed_token = tokenizer.tokenize(org_sent)
-    processed_sent = " ".join(processed_token)
-    #srl_result = srl_predictor.predict(sentence)
-    #org_tokens = run_split_on_punc(org_sent)
-    srl_result = srl_predictor.predict(processed_sent)#" ".join(org_tokens))
+    tok_text = " ".join(token_list)
+
+    # De-tokenize WordPieces that have been split off.
+    tok_text = tok_text.replace(" ##", "")
+    tok_text = tok_text.replace("##", "")
+
+    # Clean whitespace
+    tok_text = tok_text.strip()
+    tok_text = " ".join(tok_text.split())
+
+    srl_result = srl_predictor.predict(tok_text)
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
-    '''
-    if not(len(sen_words) == len(token_list)):
-        print("===============================")
-        print(len(sen_words), len(token_list))
-        print(sen_words)
-        print(token_list)
-        print("===============================")
-    '''
-    #assert len(sen_words) == len(token_list)
+
     cnt_tag = 0
     tag_ix = 0
     if len(sen_verbs) == 0:
@@ -344,7 +334,6 @@ def get_tag_from_token(srl_predictor, token_list, org_sent, tokenizer):
     while cnt < len(token_list):
         if flag:
             sen_word = sen_word + sen_words[cnt_sen_words]
-            #print(tmp_new_sent_tag)
         else:
             sen_word = sen_words[cnt_sen_words]
         token = token_list[cnt]
@@ -358,10 +347,7 @@ def get_tag_from_token(srl_predictor, token_list, org_sent, tokenizer):
         else:
             flag = False
         tmp_new_sent_tag = new_sent_tag.copy()
-        if new_token == "[UNK]":
-            cnt_sen_words += 1
-            continue
-        #print(sen_word, new_token)
+
         while (sen_word != new_token) and (cnt < len(token_list)):
             nxt_token = token_list[cnt]
             new_token = new_token.strip('#') + nxt_token.strip('#')
@@ -370,23 +356,8 @@ def get_tag_from_token(srl_predictor, token_list, org_sent, tokenizer):
                 new_sent_tag.append('I' + sent_tag[cnt_sen_words][1:])
             else:
                 new_sent_tag.append(sent_tag[cnt_sen_words])
-            if nxt_token == '[UNK]':
-                if cnt_sen_words < len(sen_words) - 1:
-                    sen_word = sen_words[cnt_sen_words + 1]
-                    while cnt < len(token_list):
-                        new_token = token_list[cnt]
-                        cnt += 1
-                        if len(new_token) > 1:
-                            new_token = new_token.strip("#")
-                        if new_token[0] == sen_word[0]:
-                            cnt_sen_words += 1
-                            new_sent_tag.append(sent_tag[cnt_sen_words])
-                            break
-                        if sent_tag[cnt_sen_words][0] == 'B':
-                            new_sent_tag.append('I' + sent_tag[cnt_sen_words][1:])
-                        else:
-                            new_sent_tag.append(sent_tag[cnt_sen_words])
-        if (sen_word != new_token) and ("[UNK]" not in new_token):
+
+        if sen_word != new_token:
             print("=============================")
             print(sen_word, new_token)
             print(sen_words, token_list)
@@ -395,7 +366,6 @@ def get_tag_from_token(srl_predictor, token_list, org_sent, tokenizer):
             cnt = tmp_cnt
             new_sent_tag = tmp_new_sent_tag.copy()
 
-        # assert (sen_word == new_token) or ("[UNK]" in new_token)
         cnt_sen_words += 1
 
     '''
@@ -419,7 +389,7 @@ def get_tag_from_token(srl_predictor, token_list, org_sent, tokenizer):
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
                                  doc_stride, max_query_length,
-                                 is_training, srl_predictor, srl_tokenizer):
+                                 is_training, srl_predictor):
     """Loads a data file into a list of `InputBatch`s."""
 
     unique_id = 1000000000
@@ -431,7 +401,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
 
-        query_tags = get_tag_from_token(srl_predictor, query_tokens, example.question_text, srl_tokenizer)
+        query_tags = get_tag_from_token(srl_predictor, query_tokens)
 
         assert len(query_tags) == len(query_tokens)
 
@@ -455,7 +425,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 for sub_token in sub_tokens:
                     all_sent_tokens.append(sub_token)
 
-            sent_tag = get_tag_from_token(srl_predictor, all_sent_tokens, " ".join(sent_tokens), srl_tokenizer)
+            sent_tag = get_tag_from_token(srl_predictor, all_sent_tokens)
             aligned_context_tags.extend(sent_tag)
 
         assert len(aligned_context_tags) == len(all_doc_tokens)
@@ -1106,7 +1076,6 @@ def main():
 
     train_examples = None
     num_train_steps = None
-    srl_tokenizer = BasicTokenizer()
     simple_nlp = SimpleNlp()
     srl_predictor = SRLPredictor()
 
@@ -1156,8 +1125,7 @@ def main():
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
             is_training=True,
-            srl_predictor=srl_predictor,
-            srl_tokenizer=srl_tokenizer)
+            srl_predictor=srl_predictor,)
         print("Dumping train", args.part_of_data)
         with open("save_data/train_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
             pickle.dump(train_features, f)
@@ -1236,8 +1204,7 @@ def main():
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
             is_training=False,
-            srl_predictor=srl_predictor,
-            srl_tokenizer=srl_tokenizer)
+            srl_predictor=srl_predictor)
         print("Dumping eval", args.part_of_data)
         with open("save_data/eval_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
             pickle.dump(eval_features, f)

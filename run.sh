@@ -9,7 +9,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python examples/run_squad.py \
   --do_train \
   --do_predict \
   --train_file $SQUAD_DIR/train-v1.1.json \
-  --predict_file $SQUAD_DIR/dev-v1.1.json \
+  --predict_file $SQUAD_DIR/dev.json \
   --learning_rate 3e-5 \
   --num_train_epochs 2 \
   --max_seq_length 384 \
