@@ -188,6 +188,7 @@ def read_squad_examples_with_tag(input_file, context_tag_file, question_tag_file
             '''
             for sent in sen_texts:
                 sent_tokens = []
+                prev_is_whitespace = True
                 for c in sent:
                     if is_whitespace(c):
                         prev_is_whitespace = True

@@ -4,7 +4,7 @@ export OUTPUT_DIR=./bert_base_srl
 export SQUAD_TAG_DIR=~/data/squad/srl_tags
 export PYTHONPATH=./
 #source activate pytorch
-CUDA_VISIBLE_DEVICES=0,1,2,3 python examples/run_squad.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python examples/run_squad_sent.py \
   --bert_model bert-base-uncased \
   --do_train \
   --do_predict \
