@@ -1158,8 +1158,8 @@ def main():
             is_training=True,
             srl_predictor=srl_predictor,
             srl_tokenizer=srl_tokenizer)
-        print("Dumping train", part_of_data)
-        with open("save_data/train_features_"+str(part_of_data)+".pkl", 'wb') as f:
+        print("Dumping train", args.part_of_data)
+        with open("save_data/train_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
             pickle.dump(train_features, f)
         '''
         logger.info("***** Running training *****")
@@ -1228,7 +1228,7 @@ def main():
             is_training=False)
         '''
         eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, is_training=False,
-                                                     simple_nlp=simple_nlp, part_of_data=part_of_data)
+                                                     simple_nlp=simple_nlp, part_of_data=args.part_of_data)
         eval_features = convert_examples_to_features(
             examples=eval_examples,
             tokenizer=tokenizer,
@@ -1238,8 +1238,8 @@ def main():
             is_training=False,
             srl_predictor=srl_predictor,
             srl_tokenizer=srl_tokenizer)
-        print("Dumping eval", part_of_data)
-        with open("save_data/eval_features_"+str(part_of_data)+".pkl", 'wb') as f:
+        print("Dumping eval", args.part_of_data)
+        with open("save_data/eval_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
             pickle.dump(eval_features, f)
         '''
         logger.info("***** Running predictions *****")

@@ -384,7 +384,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             all_sent_token = []
             sent_tag_tokens = context_tags[sent_ix]
             for token in sent_tokens:
-                sub_tokens = tokenizer.tokenizer(token)
+                sub_tokens = tokenizer.tokenize(token)
                 for sub_token in sub_tokens:
                     all_sent_token.append(sub_token)
             if len(all_sent_token) <= len(sent_tag_tokens):
