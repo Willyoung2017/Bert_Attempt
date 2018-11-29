@@ -295,53 +295,7 @@ def read_squad_examples(input_file, is_training):
     return examples
 
 
-def run_strip_accents(text):
-    """Strips accents from a piece of text."""
-    text = unicodedata.normalize("NFD", text)
-    output = []
-    for char in text:
-        cat = unicodedata.category(char)
-        if cat == "Mn":
-            continue
-        output.append(char)
-    return "".join(output)
-
-
-
-def is_punctuation(char):
-    """Checks whether `chars` is a punctuation character."""
-    cp = ord(char)
-    if ((cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or
-            (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126)):
-        return True
-    cat = unicodedata.category(char)
-    if cat.startswith("P"):
-        return True
-    return False
-
-
-def run_split_on_punc(text):
-    """Splits punctuation on a piece of text."""
-    chars = list(text)
-    i = 0
-    start_new_word = True
-    output = []
-    while i < len(chars):
-        char = chars[i]
-        if is_punctuation(char):
-            output.append([char])
-            start_new_word = True
-        else:
-            if start_new_word:
-                output.append([])
-            start_new_word = False
-            output[-1].append(char)
-        i += 1
-
-    return ["".join(x) for x in output]
-
-
-def get_tag_from_token(srl_predictor, token_list, org_sent):
+def get_tag_from_token(srl_predictor, token_list, org_sent, tokenizer):
     """
     new_token_list = []
     for token in token_list:
@@ -351,9 +305,11 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
 
     sentence = " ".join(new_token_list)
     """
+    processed_token = tokenizer.tokenize(org_sent)
+    processed_sent = " ".join(processed_token)
     #srl_result = srl_predictor.predict(sentence)
     #org_tokens = run_split_on_punc(org_sent)
-    srl_result = srl_predictor.predict(org_sent)#" ".join(org_tokens))
+    srl_result = srl_predictor.predict(processed_sent)#" ".join(org_tokens))
     sen_verbs = srl_result['verbs']
     sen_words = srl_result['words']
     '''
@@ -387,10 +343,10 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
     sen_word = ""
     while cnt < len(token_list):
         if flag:
-            sen_word = sen_word + run_strip_accents(sen_words[cnt_sen_words].lower())
+            sen_word = sen_word + sen_words[cnt_sen_words]
             #print(tmp_new_sent_tag)
         else:
-            sen_word = run_strip_accents(sen_words[cnt_sen_words].lower())
+            sen_word = sen_words[cnt_sen_words]
         token = token_list[cnt]
         new_token = token
         if len(token) > 1:
@@ -416,7 +372,7 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
                 new_sent_tag.append(sent_tag[cnt_sen_words])
             if nxt_token == '[UNK]':
                 if cnt_sen_words < len(sen_words) - 1:
-                    sen_word = run_strip_accents(sen_words[cnt_sen_words + 1].lower())
+                    sen_word = sen_words[cnt_sen_words + 1]
                     while cnt < len(token_list):
                         new_token = token_list[cnt]
                         cnt += 1
@@ -462,7 +418,8 @@ def get_tag_from_token(srl_predictor, token_list, org_sent):
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
-                                 doc_stride, max_query_length, is_training, srl_predictor):
+                                 doc_stride, max_query_length,
+                                 is_training, srl_predictor, srl_tokenizer):
     """Loads a data file into a list of `InputBatch`s."""
 
     unique_id = 1000000000
@@ -474,7 +431,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
 
-        query_tags = get_tag_from_token(srl_predictor, query_tokens, example.question_text)
+        query_tags = get_tag_from_token(srl_predictor, query_tokens, example.question_text, srl_tokenizer)
 
         assert len(query_tags) == len(query_tokens)
 
@@ -498,7 +455,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 for sub_token in sub_tokens:
                     all_sent_tokens.append(sub_token)
 
-            sent_tag = get_tag_from_token(srl_predictor, all_sent_tokens, " ".join(sent_tokens))
+            sent_tag = get_tag_from_token(srl_predictor, all_sent_tokens, " ".join(sent_tokens), srl_tokenizer)
             aligned_context_tags.extend(sent_tag)
 
         assert len(aligned_context_tags) == len(all_doc_tokens)
@@ -1149,6 +1106,7 @@ def main():
 
     train_examples = None
     num_train_steps = None
+    srl_tokenizer = BasicTokenizer()
     simple_nlp = SimpleNlp()
     srl_predictor = SRLPredictor()
 
@@ -1198,7 +1156,8 @@ def main():
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
             is_training=True,
-            srl_predictor=srl_predictor)
+            srl_predictor=srl_predictor,
+            srl_tokenizer=srl_tokenizer)
         print("Dumping train", part_of_data)
         with open("save_data/train_features_"+str(part_of_data)+".pkl", 'wb') as f:
             pickle.dump(train_features, f)
@@ -1277,7 +1236,8 @@ def main():
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
             is_training=False,
-            srl_predictor=srl_predictor)
+            srl_predictor=srl_predictor,
+            srl_tokenizer=srl_tokenizer)
         print("Dumping eval", part_of_data)
         with open("save_data/eval_features_"+str(part_of_data)+".pkl", 'wb') as f:
             pickle.dump(eval_features, f)
