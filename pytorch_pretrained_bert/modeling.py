@@ -195,41 +195,10 @@ class BertEmbeddings(nn.Module):
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
         if input_tags is not None:
             srl_embeddings = self.srl_embeddings(input_tags)
-            embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
+            embeddings = (words_embeddings + position_embeddings + token_type_embeddings).mul(srl_embeddings)
+            #embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
         else:
             embeddings = words_embeddings + position_embeddings + token_type_embeddings
-        embeddings = self.LayerNorm(embeddings)
-        embeddings = self.dropout(embeddings)
-        return embeddings
-
-
-class BertEmbeddingsWithSRL(nn.Module):
-    """Construct the embeddings from word, position and token_type embeddings.
-    """
-    def __init__(self, config):
-        super(BertEmbeddingsWithSRL, self).__init__()
-        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
-        self.srl_embeddings = nn.Embedding(config.tag_size, config.hidden_size)
-        # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
-        # any TensorFlow checkpoint file
-        self.LayerNorm = BertLayerNorm(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-
-    def forward(self, input_ids, token_type_ids=None, input_tags=None):
-        seq_length = input_ids.size(1)
-        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
-        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
-        if token_type_ids is None:
-            token_type_ids = torch.zeros_like(input_ids)
-
-        words_embeddings = self.word_embeddings(input_ids)
-        position_embeddings = self.position_embeddings(position_ids)
-        token_type_embeddings = self.token_type_embeddings(token_type_ids)
-        srl_embeddings = self.srl_embeddings(input_tags)
-
-        embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings

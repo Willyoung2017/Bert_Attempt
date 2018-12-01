@@ -41,6 +41,7 @@ PRETRAINED_VOCAB_ARCHIVE_MAP = {
 
 TAG_VOCAB_FILE = join(expanduser("~"),"data","squad","srl_tags","tag_list.pkl")
 
+
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
     if isinstance(text, str):

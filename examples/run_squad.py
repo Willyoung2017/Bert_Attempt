@@ -147,6 +147,7 @@ def read_squad_examples_with_tag(input_file, is_training, simple_nlp, part_of_da
         input_data = input_data[9*length:]
     else:
         input_data = input_data[(part_of_data-1)*length:part_of_data*length]
+    #input_data = input_data[:2]
     print("Start reading " + str(part_of_data) + " of length " + str(len(input_data)))
     for entry_ix, entry in enumerate(input_data):
 
@@ -395,6 +396,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
     unique_id = 1000000000
 
     features = []
+    # examples = examples[:1]
     for (example_index, example) in tqdm(enumerate(examples),ncols=80, total=len(examples)):
         query_tokens = tokenizer.tokenize(example.question_text)
 
