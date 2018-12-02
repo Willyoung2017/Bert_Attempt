@@ -1119,7 +1119,7 @@ def main():
         with open("save_data/train_tags.json","r") as train_f:
             load_dict = json.load(train_f)
             for i in range(len(load_dict)):
-                train_tags.append(load_dict[i]["srl_tags"].split())
+                train_tags.append(load_dict[str(i)]["srl_tags"].split())
         train_features = convert_examples_to_features(
             examples=train_examples,
             tokenizer=tokenizer,
@@ -1201,10 +1201,10 @@ def main():
         eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, is_training=False,
                                                      simple_nlp=simple_nlp)
         eval_tags=[]
-        with open("save_data/eval_tags.json","r") as train_f:
+        with open("save_data/dev_tags.json","r") as train_f:
             load_dict = json.load(train_f)
             for i in range(len(load_dict)):
-                eval_tags.append(load_dict[i]["srl_tags"].split())
+                eval_tags.append(load_dict[str(i)]["srl_tags"].split())
         eval_features = convert_examples_to_features(
             examples=eval_examples,
             tokenizer=tokenizer,
