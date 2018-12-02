@@ -461,7 +461,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
         for (doc_span_index, doc_span) in enumerate(doc_spans):
             this_tag = tags[tag_ix]
-            tag_ix += 1
+            #tag_ix += 1
             tokens = []
             #tag_tokens=[]
             token_to_orig_map = {}
@@ -582,6 +582,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                     end_position=end_position,
                     input_tags=input_tags))
             unique_id += 1
+            tag_ix += 1
 
     return features
 
