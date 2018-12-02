@@ -98,11 +98,12 @@ def main():
                 if tag != 0:
                     input_tags.append(tag)
                     if tag not in tag_list:
-                        print(tag)
+                        #print(tag)
                         tag_list.append(tag)
             #input_tags = [tag for tag in feature.input_tags if tag != 0]
             token_list = feature.tokens.copy()
             assert len(input_tags) == len(token_list)
+            #print(len(input_tags), len(token_list))
             data = {"sentence_words":" ".join(token_list), "srl_tags":" ".join(input_tags)}
             output_data[index] = data
 

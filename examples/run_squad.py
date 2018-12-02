@@ -390,10 +390,11 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
     unique_id = 1000000000
 
     features = []
+    tag_ix = 0
     # examples = examples[:1]
     for (example_index, example) in tqdm(enumerate(examples),ncols=80, total=len(examples)):
         query_tokens = tokenizer.tokenize(example.question_text)
-        this_tag = tags[example_index]
+
 
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
@@ -459,6 +460,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             start_offset += min(length, doc_stride)
 
         for (doc_span_index, doc_span) in enumerate(doc_spans):
+            this_tag = tags[tag_ix]
+            tag_ix += 1
             tokens = []
             #tag_tokens=[]
             token_to_orig_map = {}
@@ -499,6 +502,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             #input_tags = tokenizer.convert_tags_to_ids(tag_tokens)
             #input_tags = tag_tokens
             input_tags = tokenizer.convert_tags_to_ids(this_tag)
+            assert len(input_tags) == len(input_ids)
             if len(input_tags) == 3:
                 input_tags = None
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
