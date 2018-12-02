@@ -87,7 +87,7 @@ def load_tag_vocab(tag_vocab_file):
     with open(tag_vocab_file, 'rb') as f:
         vocab_list = pickle.load(f)
     #vocab.extend(vocab_list)
-    return vocab
+    return vocab_list
 
 
 def whitespace_tokenize(text):

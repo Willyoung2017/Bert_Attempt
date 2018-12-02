@@ -195,8 +195,8 @@ class BertEmbeddings(nn.Module):
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
         if input_tags is not None:
             srl_embeddings = self.srl_embeddings(input_tags)
-            embeddings = (words_embeddings + position_embeddings + token_type_embeddings).mul(srl_embeddings)
-            #embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
+            #embeddings = (words_embeddings + position_embeddings + token_type_embeddings).mul(srl_embeddings)
+            embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
         else:
             embeddings = words_embeddings + position_embeddings + token_type_embeddings
         embeddings = self.LayerNorm(embeddings)
