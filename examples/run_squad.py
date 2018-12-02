@@ -502,7 +502,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             #input_tags = tokenizer.convert_tags_to_ids(tag_tokens)
             #input_tags = tag_tokens
             input_tags = tokenizer.convert_tags_to_ids(this_tag)
-            assert len(input_tags) == len(input_ids)
+            input_tags_tmp = input_tags.copy()
+            input_ids_tmp = input_ids.copy()
             if len(input_tags) == 3:
                 input_tags = None
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
@@ -538,6 +539,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 doc_offset = len(query_tokens) + 2
                 start_position = tok_start_position - doc_start + doc_offset
                 end_position = tok_end_position - doc_start + doc_offset
+            assert len(input_tags_tmp) == len(input_ids_tmp)
             '''
             if example_index < 20:
                 
