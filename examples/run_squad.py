@@ -131,7 +131,7 @@ class SRLPredictor(object):
         return self.predictor.predict(sentence=sent)
 
 
-def read_squad_examples_with_tag(input_file, is_training, simple_nlp, part_of_data):
+def read_squad_examples_with_tag(input_file, is_training, simple_nlp):
     """Read a SQuAD json file into a list of SquadExample."""
     with open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
@@ -142,13 +142,7 @@ def read_squad_examples_with_tag(input_file, is_training, simple_nlp, part_of_da
         return False
 
     examples = []
-    length = int(len(input_data)/10)
-    if part_of_data == 10:
-        input_data = input_data[9*length:]
-    else:
-        input_data = input_data[(part_of_data-1)*length:part_of_data*length]
-    #input_data = input_data[:2]
-    print("Start reading " + str(part_of_data) + " of length " + str(len(input_data)))
+
     for entry_ix, entry in enumerate(input_data):
 
         for para_ix, paragraph in enumerate(entry["paragraphs"]):
@@ -400,7 +394,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
     for (example_index, example) in tqdm(enumerate(examples),ncols=80, total=len(examples)):
         query_tokens = tokenizer.tokenize(example.question_text)
         this_tag = tags[example_index]
-        
+
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
 
@@ -1030,8 +1024,7 @@ def main():
                         help='Loss scaling, positive power of 2 values can improve fp16 convergence.')
     parser.add_argument('--n_tag', type=int, default=103)
     parser.add_argument('--do_lower_case', type=bool, default=True)
-    parser.add_argument("--part_of_data", type=int, default=4)
-    
+
     args = parser.parse_args()
 
     if args.local_rank == -1 or args.no_cuda:
@@ -1086,7 +1079,7 @@ def main():
     if args.do_train:
         # train_examples = read_squad_examples(input_file=args.train_file, is_training=True)
         train_examples = read_squad_examples_with_tag(input_file=args.train_file, is_training=True,
-                                                      simple_nlp=simple_nlp, part_of_data=args.part_of_data)
+                                                      simple_nlp=simple_nlp)
         num_train_steps = int(
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
 
@@ -1206,7 +1199,7 @@ def main():
             is_training=False)
         '''
         eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, is_training=False,
-                                                     simple_nlp=simple_nlp, part_of_data=args.part_of_data)
+                                                     simple_nlp=simple_nlp)
         eval_tags=[]
         with open("save_data/eval_tags.json","w") as train_f:
             load_dict = json.load(train_f)
