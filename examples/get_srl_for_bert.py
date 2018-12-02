@@ -89,11 +89,18 @@ def main():
             print("Loading data from "+(eval_file.split("/"))[-1]+"...")
             features = pickle.load(f)
             eval_features.extend(features)
-
+    tag_list = []
     def store_data(stored_features, output_file):
         output_data = {}
         for index, feature in tqdm(enumerate(stored_features), ncols=80, total=len(stored_features)):
-            input_tags = [tag for tag in feature.input_tags if tag != 0]
+            input_tags = []
+            for tag in feature.input_tags:
+                if tag != 0:
+                    input_tags.append(tag)
+                    if tag not in tag_list:
+                        print(tag)
+                        tag_list.append(tag)
+            #input_tags = [tag for tag in feature.input_tags if tag != 0]
             token_list = feature.tokens.copy()
             assert len(input_tags) == len(token_list)
             data = {"sentence_words":" ".join(token_list), "srl_tags":" ".join(input_tags)}
@@ -104,7 +111,9 @@ def main():
 
     store_data(train_features, join(args.output_dir, "train_tags.json"))
     store_data(eval_features, join(args.output_dir, "dev_tags.json"))
-
+    print(len(tag_list))
+    with open(join(args.output_dir,"tag_list.pkl"), 'wb') as f:
+        pickle.dump(tag_list, f)
 
 if __name__ == "__main__":
     print("Start getting labels:")

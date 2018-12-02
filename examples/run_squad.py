@@ -1022,7 +1022,7 @@ def main():
     parser.add_argument('--loss_scale',
                         type=float, default=128,
                         help='Loss scaling, positive power of 2 values can improve fp16 convergence.')
-    parser.add_argument('--n_tag', type=int, default=103)
+    parser.add_argument('--n_tag', type=int, default=94)
     parser.add_argument('--do_lower_case', type=bool, default=True)
 
     args = parser.parse_args()

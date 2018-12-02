@@ -122,7 +122,7 @@ class BertConfig(object):
         else:
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
-        self.tag_size = 103
+        self.tag_size = 94
 
     @classmethod
     def from_dict(cls, json_object):

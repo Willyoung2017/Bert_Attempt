@@ -13,3 +13,5 @@ srl_model/allen_test2.py
 *.json
 srl_model/model/srl-model-2018.05.25.tar.gz
 srl_model/tests/fixtures/biaffine_dependency_parser/serialization/model.tar.gz
+*.pkl
+*.zip

@@ -39,7 +39,7 @@ PRETRAINED_VOCAB_ARCHIVE_MAP = {
     'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese-vocab.txt",
 }
 
-TAG_VOCAB_FILE = join(expanduser("~"),"data","squad","srl_tags","tag_list.pkl")
+TAG_VOCAB_FILE = join("save_data","tag_list.pkl")
 
 
 def convert_to_unicode(text):
@@ -86,7 +86,7 @@ def load_tag_vocab(tag_vocab_file):
         return vocab
     with open(tag_vocab_file, 'rb') as f:
         vocab_list = pickle.load(f)
-    vocab.extend(vocab_list)
+    #vocab.extend(vocab_list)
     return vocab
 
 
