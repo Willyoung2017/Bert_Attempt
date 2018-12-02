@@ -390,7 +390,7 @@ def get_tag_from_token(srl_predictor, token_list):
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
                                  doc_stride, max_query_length,
-                                 is_training, srl_predictor):
+                                 is_training, srl_predictor, tags):
     """Loads a data file into a list of `InputBatch`s."""
 
     unique_id = 1000000000
@@ -399,13 +399,14 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
     # examples = examples[:1]
     for (example_index, example) in tqdm(enumerate(examples),ncols=80, total=len(examples)):
         query_tokens = tokenizer.tokenize(example.question_text)
-
+        this_tag = tags[example_index]
+        
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
 
-        query_tags = get_tag_from_token(srl_predictor, query_tokens)
+        #query_tags = get_tag_from_token(srl_predictor, query_tokens)
 
-        assert len(query_tags) == len(query_tokens)
+        #assert len(query_tags) == len(query_tokens)
 
         tok_to_orig_index = []
         orig_to_tok_index = []
@@ -417,7 +418,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             for sub_token in sub_tokens:
                 tok_to_orig_index.append(i)
                 all_doc_tokens.append(sub_token)
-
+        '''
         aligned_context_tags = []
         for (sent_ix, sent_tokens) in enumerate(example.sent_token_list):
             all_sent_tokens = []
@@ -431,7 +432,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             aligned_context_tags.extend(sent_tag)
 
         assert len(aligned_context_tags) == len(all_doc_tokens)
-
+        '''
         tok_start_position = None
         tok_end_position = None
         if is_training:
@@ -465,14 +466,14 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
         for (doc_span_index, doc_span) in enumerate(doc_spans):
             tokens = []
-            tag_tokens=[]
+            #tag_tokens=[]
             token_to_orig_map = {}
             token_is_max_context = {}
             segment_ids = []
 
-            tag_tokens.append("[CLS]")
-            tag_tokens.extend(query_tags)
-            tag_tokens.append("[SEP]")
+            #tag_tokens.append("[CLS]")
+            #tag_tokens.extend(query_tags)
+            #tag_tokens.append("[SEP]")
 
             tokens.append("[CLS]")
             segment_ids.append(0)
@@ -492,17 +493,18 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
 
-                tag_tokens.append(aligned_context_tags[split_token_index])
+                #tag_tokens.append(aligned_context_tags[split_token_index])
 
                 segment_ids.append(1)
 
-            tag_tokens.append("[SEP]")
+            #tag_tokens.append("[SEP]")
             tokens.append("[SEP]")
             segment_ids.append(1)
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
             #input_tags = tokenizer.convert_tags_to_ids(tag_tokens)
-            input_tags = tag_tokens
+            #input_tags = tag_tokens
+            input_tags = tokenizer.convert_tags_to_ids(this_tag)
             if len(input_tags) == 3:
                 input_tags = None
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
@@ -1120,6 +1122,11 @@ def main():
 
     global_step = 0
     if args.do_train:
+        train_tags=[]
+        with open("save_data/train_tags.json","w") as train_f:
+            load_dict = json.load(train_f)
+            for i in range(len(load_dict)):
+                train_tags.append(load_dict[i]["srl_tags"].split())
         train_features = convert_examples_to_features(
             examples=train_examples,
             tokenizer=tokenizer,
@@ -1127,11 +1134,12 @@ def main():
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
             is_training=True,
-            srl_predictor=srl_predictor,)
-        print("Dumping train", args.part_of_data)
-        with open("save_data/train_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
-            pickle.dump(train_features, f)
-        '''
+            srl_predictor=srl_predictor,
+            tags=train_tags)
+        #print("Dumping train", args.part_of_data)
+        #with open("save_data/train_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
+        #    pickle.dump(train_features, f)
+
         logger.info("***** Running training *****")
         logger.info("  Num orig examples = %d", len(train_examples))
         logger.info("  Num split examples = %d", len(train_features))
@@ -1185,7 +1193,7 @@ def main():
                         optimizer.step()
                     model.zero_grad()
                     global_step += 1
-        '''
+
     if args.do_predict:
         '''
         eval_examples = read_squad_examples(input_file=args.predict_file, is_training=False)
@@ -1199,6 +1207,11 @@ def main():
         '''
         eval_examples = read_squad_examples_with_tag(input_file=args.predict_file, is_training=False,
                                                      simple_nlp=simple_nlp, part_of_data=args.part_of_data)
+        eval_tags=[]
+        with open("save_data/eval_tags.json","w") as train_f:
+            load_dict = json.load(train_f)
+            for i in range(len(load_dict)):
+                eval_tags.append(load_dict[i]["srl_tags"].split())
         eval_features = convert_examples_to_features(
             examples=eval_examples,
             tokenizer=tokenizer,
@@ -1206,11 +1219,12 @@ def main():
             doc_stride=args.doc_stride,
             max_query_length=args.max_query_length,
             is_training=False,
-            srl_predictor=srl_predictor)
-        print("Dumping eval", args.part_of_data)
-        with open("save_data/eval_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
-            pickle.dump(eval_features, f)
-        '''
+            srl_predictor=srl_predictor,
+            tags=eval_tags)
+        #print("Dumping eval", args.part_of_data)
+        #with open("save_data/eval_features_"+str(args.part_of_data)+".pkl", 'wb') as f:
+        #    pickle.dump(eval_features, f)
+
         logger.info("***** Running predictions *****")
         logger.info("  Num orig examples = %d", len(eval_examples))
         logger.info("  Num split examples = %d", len(eval_features))
@@ -1255,6 +1269,6 @@ def main():
                           args.do_lower_case, output_prediction_file,
                           output_nbest_file, args.verbose_logging)
 
-        '''
+
 if __name__ == "__main__":
     main()
