@@ -40,6 +40,7 @@ from torch.utils.data.distributed import DistributedSampler
 from pytorch_pretrained_bert.tokenization import printable_text, whitespace_tokenize, BasicTokenizer, BertTokenizer
 from pytorch_pretrained_bert.modeling import BertForQuestionAnswering
 from pytorch_pretrained_bert.optimization import BertAdam
+from evaluate_official import evaluate
 
 logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s', 
                     datefmt = '%m/%d/%Y %H:%M:%S',
@@ -1279,6 +1280,16 @@ def main():
                             args.n_best_size, args.max_answer_length,
                             args.do_lower_case, output_prediction_file,
                             output_nbest_file, args.verbose_logging)
+            with open(args.predict_file) as dataset_file:
+                dataset_json = json.load(dataset_file)
+                dataset = dataset_json['data']
+            with open(output_prediction_file) as prediction_file:
+                predictions = json.load(prediction_file)
+            print("==============score==================")
+            score = json.dumps(evaluate(dataset, predictions))
+            print(score)
+            with open(os.path.join(args.output_dir,"score.json"), 'w') as json_file:
+                json_file.write(score)
 
 
 if __name__ == "__main__":
