@@ -123,6 +123,7 @@ class BertConfig(object):
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
         self.tag_size = 94
+        self.hidden_size=773
 
     @classmethod
     def from_dict(cls, json_object):
@@ -173,9 +174,9 @@ class BertEmbeddings(nn.Module):
     """
     def __init__(self, config):
         super(BertEmbeddings, self).__init__()
-        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+        self.word_embeddings = nn.Embedding(config.vocab_size, 768)
+        self.position_embeddings = nn.Embedding(config.max_position_embeddings, 768)
+        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, 768)
         self.srl_embeddings = nn.Embedding(config.tag_size, 5)
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
@@ -198,7 +199,7 @@ class BertEmbeddings(nn.Module):
             #embeddings = (words_embeddings + position_embeddings + token_type_embeddings).mul(srl_embeddings)
             #embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
             embeddings = words_embeddings + position_embeddings + token_type_embeddings
-            embeddings = torch.cat(embeddings, srl_embeddings)
+            embeddings = torch.cat((embeddings, srl_embeddings),2)
         else:
             embeddings = words_embeddings + position_embeddings + token_type_embeddings
         embeddings = self.LayerNorm(embeddings)
