@@ -123,7 +123,6 @@ class BertConfig(object):
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
         self.tag_size = 94
-        self.hidden_size=773
 
     @classmethod
     def from_dict(cls, json_object):
@@ -131,6 +130,7 @@ class BertConfig(object):
         config = BertConfig(vocab_size_or_config_json_file=-1)
         for key, value in json_object.items():
             config.__dict__[key] = value
+        config.__dict__["hidden_size"]=780
         return config
 
     @classmethod
@@ -177,7 +177,7 @@ class BertEmbeddings(nn.Module):
         self.word_embeddings = nn.Embedding(config.vocab_size, 768)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, 768)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, 768)
-        self.srl_embeddings = nn.Embedding(config.tag_size, 5)
+        self.srl_embeddings = nn.Embedding(config.tag_size, 12)
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
