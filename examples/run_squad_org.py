@@ -827,8 +827,7 @@ def main():
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
 
     # Prepare model
-    model = BertForQuestionAnswering.from_pretrained(args.bert_model,
-                cache_dir=PYTORCH_PRETRAINED_BERT_CACHE / 'distributed_{}'.format(args.local_rank))
+    model = BertForQuestionAnswering.from_pretrained(args.bert_model)
     if args.fp16:
         model.half()
     model.to(device)
@@ -933,13 +932,12 @@ def main():
                     else:
                         optimizer.step()
                     model.zero_grad()
-                if global_step % eval_period == 0:
-                    save_path = os.path.join(args.output_dir,"step_"+str(global_step))
-                    if not os.path.exists(save_path):
-                        os.makedirs(save_path)
+                    if global_step % eval_period == 0:
+                        print("Saving model...")
+                        save_path = os.path.join(args.output_dir,"step_"+str(global_step)+".pth")
+                        torch.save(model.state_dict(), save_path)
                         save_path_ls.append(save_path)
-                    torch.save(model.state_dict(), save_path)
-                global_step += 1
+                    global_step += 1
 
     if args.do_predict and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
         eval_examples = read_squad_examples(
