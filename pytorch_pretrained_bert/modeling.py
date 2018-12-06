@@ -41,7 +41,8 @@ logger = logging.getLogger(__name__)
 PRETRAINED_MODEL_ARCHIVE_MAP = {
     'bert-base-uncased': "./bert_models/bert-base-uncased/bert-base-uncased.tar.gz",
     'bert-large-uncased': "./bert_models/bert-large-uncased/bert-large-uncased.tar.gz",
-    'bert-base-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased.tar.gz",
+    'bert-base-cased': "./bert_models/bert-base-cased/bert-base-cased.tar.gz",
+    'bert-large-cased': "./bert_models/bert-large-cased/bert-large-cased.tar.gz",
     'bert-base-multilingual': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual.tar.gz",
     'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese.tar.gz",
 }

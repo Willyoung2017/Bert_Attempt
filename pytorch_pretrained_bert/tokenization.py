@@ -34,7 +34,8 @@ logger = logging.getLogger(__name__)
 PRETRAINED_VOCAB_ARCHIVE_MAP = {
     'bert-base-uncased':"./bert_models/bert-base-uncased/bert-base-uncased-vocab.txt",
     'bert-large-uncased':"./bert_models/bert-large-uncased/bert-large-uncased-vocab.txt",
-    'bert-base-cased': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-cased-vocab.txt",
+    'bert-base-cased': "./bert_models/bert-base-cased/bert-base-cased-vocab.txt",
+    'bert-large-cased': "./bert_models/bert-large-cased/bert-large-cased-vocab.txt",
     'bert-base-multilingual': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-multilingual-vocab.txt",
     'bert-base-chinese': "https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-chinese-vocab.txt",
 }
