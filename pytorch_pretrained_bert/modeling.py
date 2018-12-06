@@ -176,7 +176,7 @@ class BertEmbeddings(nn.Module):
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
-        self.srl_embeddings = nn.Embedding(config.tag_size, config.hidden_size)
+        self.srl_embeddings = nn.Embedding(config.tag_size, 5)
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
@@ -196,7 +196,9 @@ class BertEmbeddings(nn.Module):
         if input_tags is not None:
             srl_embeddings = self.srl_embeddings(input_tags)
             #embeddings = (words_embeddings + position_embeddings + token_type_embeddings).mul(srl_embeddings)
-            embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
+            #embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
+            embeddings = words_embeddings + position_embeddings + token_type_embeddings
+            embeddings = torch.cat(embeddings, srl_embeddings)
         else:
             embeddings = words_embeddings + position_embeddings + token_type_embeddings
         embeddings = self.LayerNorm(embeddings)
