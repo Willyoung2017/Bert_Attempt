@@ -966,6 +966,11 @@ def main():
 
         for save_dir in save_path_ls:
             model.load_state_dict(torch.load(save_dir))
+            model_name = save_dir.split('/')[-1]
+            step_name = model_name[:-4]
+            output_path = os.path.join(args.output_dir, step_name)
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
             model.eval()
             all_results = []
             logger.info("Start evaluating")
@@ -985,8 +990,8 @@ def main():
                     all_results.append(RawResult(unique_id=unique_id,
                                                 start_logits=start_logits,
                                                 end_logits=end_logits))
-            output_prediction_file = os.path.join(save_dir, "predictions.json")
-            output_nbest_file = os.path.join(save_dir, "nbest_predictions.json")
+            output_prediction_file = os.path.join(output_path, "predictions.json")
+            output_nbest_file = os.path.join(output_path, "nbest_predictions.json")
             write_predictions(eval_examples, eval_features, all_results,
                             args.n_best_size, args.max_answer_length,
                             args.do_lower_case, output_prediction_file,
