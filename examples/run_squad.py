@@ -1177,7 +1177,9 @@ def main():
                     loss = loss * args.loss_scale
                 if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
-                print(loss.to("cpu").numpy())
+                if global_step % 1000 == 0:
+                    print("=====================================")
+                    print("loss",loss.to("cpu").detach().numpy())
                 loss.backward()
                 if (step + 1) % args.gradient_accumulation_steps == 0:
                     if args.fp16 or args.optimize_on_cpu:

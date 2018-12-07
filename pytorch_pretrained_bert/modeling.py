@@ -131,7 +131,7 @@ class BertConfig(object):
         config = BertConfig(vocab_size_or_config_json_file=-1)
         for key, value in json_object.items():
             config.__dict__[key] = value
-        config.__dict__["hidden_size"]=780
+        #config.__dict__["hidden_size"]=780
         return config
 
     @classmethod
@@ -198,9 +198,9 @@ class BertEmbeddings(nn.Module):
         if input_tags is not None:
             srl_embeddings = self.srl_embeddings(input_tags)
             #embeddings = (words_embeddings + position_embeddings + token_type_embeddings).mul(srl_embeddings)
-            #embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
-            embeddings = words_embeddings + position_embeddings + token_type_embeddings
-            embeddings = torch.cat((embeddings, srl_embeddings),2)
+            embeddings = words_embeddings + position_embeddings + token_type_embeddings + srl_embeddings
+            #embeddings = words_embeddings + position_embeddings + token_type_embeddings
+            #embeddings = torch.cat((embeddings, srl_embeddings),2)
         else:
             embeddings = words_embeddings + position_embeddings + token_type_embeddings
         embeddings = self.LayerNorm(embeddings)
