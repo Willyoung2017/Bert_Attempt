@@ -1198,13 +1198,11 @@ def main():
                     else:
                         optimizer.step()
                     model.zero_grad()
-                    if global_step % eval_period == 0:
-                        print("Saving model...")
-                        save_path = os.path.join(args.output_dir,"step_"+str(global_step)+".pth")
-                        torch.save(model.state_dict(), save_path)
-                        save_path_ls.append(save_path)
-
                     global_step += 1
+            print("Saving model...")
+            save_path = os.path.join(args.output_dir, "step_" + str(global_step) + ".pth")
+            torch.save(model.state_dict(), save_path)
+            save_path_ls.append(save_path)
 
     if args.do_predict:
         '''
@@ -1256,6 +1254,9 @@ def main():
 
         for save_dir in save_path_ls:
             model.load_state_dict(torch.load(save_dir))
+            model_name = save_dir.split('/')[-1]
+            step_name = model_name[:-4]
+            output_path = os.path.join(args.output_dir, step_name)
             model.eval()
             all_results = []
             logger.info("Start evaluating")
@@ -1290,7 +1291,7 @@ def main():
             print("==============score==================")
             score = json.dumps(evaluate(dataset, predictions))
             print(score)
-            with open(os.path.join(args.output_dir,"score.json"), 'w') as json_file:
+            with open(os.path.join(output_path, "score.json"), 'w') as json_file:
                 json_file.write(score)
 
 
