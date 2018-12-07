@@ -1257,6 +1257,8 @@ def main():
             model_name = save_dir.split('/')[-1]
             step_name = model_name[:-4]
             output_path = os.path.join(args.output_dir, step_name)
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
             model.eval()
             all_results = []
             logger.info("Start evaluating")
