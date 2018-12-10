@@ -195,6 +195,7 @@ class BertEmbeddings(nn.Module):
         words_embeddings = self.word_embeddings(input_ids)
         position_embeddings = self.position_embeddings(position_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
+        '''
         if input_tags is not None:
             srl_embeddings = self.srl_embeddings(input_tags)
             #embeddings = (words_embeddings + position_embeddings + token_type_embeddings).mul(srl_embeddings)
@@ -203,6 +204,8 @@ class BertEmbeddings(nn.Module):
             #embeddings = torch.cat((embeddings, srl_embeddings),2)
         else:
             embeddings = words_embeddings + position_embeddings + token_type_embeddings
+        '''
+        embeddings = words_embeddings + position_embeddings + token_type_embeddings
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
@@ -944,12 +947,16 @@ class BertForQuestionAnswering(PreTrainedBertModel):
         self.bert = BertModel(config)
         # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.srl_embeddings = nn.Embedding(config.tag_size, 5)
+        self.qa_outputs = nn.Linear(config.hidden_size+5, 2)
         self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None, input_tags=None):
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False, input_tags=input_tags)
-        logits = self.qa_outputs(sequence_output)
+        srl_embeddings = self.srl_embeddings(input_tags)
+        merge_output = torch.cat((sequence_output, srl_embeddings),2)
+        #logits = self.qa_outputs(sequence_output)
+        logits = self.qa_outputs(merge_output)
         start_logits, end_logits = logits.split(1, dim=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
