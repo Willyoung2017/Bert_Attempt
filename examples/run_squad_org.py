@@ -933,10 +933,10 @@ def main():
                         optimizer.step()
                     model.zero_grad()
                     global_step += 1
-                print("Saving model...")
-                save_path = os.path.join(args.output_dir, "step_" + str(global_step) + ".pth")
-                torch.save(model.state_dict(), save_path)
-                save_path_ls.append(save_path)
+            print("Saving model...")
+            save_path = os.path.join(args.output_dir, "step_" + str(global_step) + ".pth")
+            torch.save(model.state_dict(), save_path)
+            save_path_ls.append(save_path)
 
     if args.do_predict and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
         eval_examples = read_squad_examples(
